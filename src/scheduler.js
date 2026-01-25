@@ -1,7 +1,6 @@
 const cron = require('node-cron');
-const { fetchScheduleData, getImageUrl } = require('./api');
+const { fetchScheduleData } = require('./api');
 const { parseScheduleForQueue, findNextEvent } = require('./parser');
-const { formatScheduleMessage, formatScheduleUpdateMessage } = require('./formatter');
 const { calculateHash, formatInterval } = require('./utils');
 const usersDb = require('./database/users');
 const config = require('./config');
