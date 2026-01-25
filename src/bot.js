@@ -29,7 +29,7 @@ bot.onText(/\/channel/, (msg) => handleChannel(bot, msg));
 bot.onText(/\/admin/, (msg) => handleAdmin(bot, msg));
 bot.onText(/\/stats/, (msg) => handleStats(bot, msg));
 bot.onText(/\/users/, (msg) => handleUsers(bot, msg));
-bot.onText(/\/broadcast (.+)/, (msg, match) => handleBroadcast(bot, msg, match));
+bot.onText(/\/broadcast (.+)/, (msg) => handleBroadcast(bot, msg));
 bot.onText(/\/system/, (msg) => handleSystem(bot, msg));
 
 // Команда /help
