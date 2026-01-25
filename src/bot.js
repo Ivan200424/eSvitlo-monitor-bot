@@ -296,7 +296,7 @@ bot.on('callback_query', async (query) => {
         const duration = formatExactDuration(nextEvent.minutes);
         const startTime = nextEvent.startTime ? new Date(nextEvent.startTime).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '??:??';
         const endTime = new Date(nextEvent.time).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
-        popupMessage = `⏰ до появи світла: ${duration}\n🔋 ${startTime} - ${endTime}`;
+        popupMessage = `⏰ До появи світла: ${duration}\n🔋 ${startTime} - ${endTime}`;
       }
       
       await bot.answerCallbackQuery(query.id, { text: popupMessage, show_alert: true });
