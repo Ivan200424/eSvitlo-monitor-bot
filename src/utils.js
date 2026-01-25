@@ -117,12 +117,15 @@ function formatUptime(seconds) {
 
 // Форматувати тривалість з мілісекунд
 function formatDurationFromMs(ms) {
-  const hours = Math.floor(ms / (1000 * 60 * 60));
-  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  const hours = ms / (1000 * 60 * 60);
   
-  if (hours > 0 && minutes > 0) return `${hours}год ${minutes}хв`;
-  if (hours > 0) return `${hours}год`;
-  if (minutes > 0) return `${minutes}хв`;
+  if (hours >= 1) {
+    // Format as decimal hours (e.g., "1.5 год")
+    return `${hours.toFixed(1)} год`;
+  }
+  
+  const minutes = Math.floor(ms / (1000 * 60));
+  if (minutes > 0) return `${minutes} хв`;
   return '< 1хв';
 }
 
