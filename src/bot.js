@@ -291,9 +291,9 @@ bot.on('callback_query', async (query) => {
         popupMessage = `⏰ До відключення: ${duration}\n🪫 ${startTime} - ${endTime}`;
       } else {
         const duration = formatExactDuration(nextEvent.minutes);
-        const startTime = new Date(nextEvent.time).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
-        const endTime = nextEvent.endTime ? new Date(nextEvent.endTime).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '??:??';
-        popupMessage = `⏰ До появи світла: ${duration}\n🔋 ${startTime} - ${endTime}`;
+        const startTime = nextEvent.startTime ? new Date(nextEvent.startTime).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' }) : '??:??';
+        const endTime = new Date(nextEvent.time).toLocaleTimeString('uk-UA', { hour: '2-digit', minute: '2-digit' });
+        popupMessage = `⏰ до появи світла: ${duration}\n🔋 ${startTime} - ${endTime}`;
       }
       
       await bot.answerCallbackQuery(query.id, { text: popupMessage, show_alert: true });
@@ -307,6 +307,17 @@ bot.on('callback_query', async (query) => {
   
   if (data.startsWith('stats_')) {
     const userId = parseInt(data.replace('stats_', ''));
+    const user = usersDb.getUserById(userId);
+    
+    // Check if user has router_ip configured
+    if (!user || !user.router_ip) {
+      await bot.answerCallbackQuery(query.id, { 
+        text: 'Налаштуйте моніторинг командою /setip для збору статистики', 
+        show_alert: true 
+      });
+      return;
+    }
+    
     const { getWeeklyStats } = require('./statistics');
     const { formatStatsForChannelPopup } = require('./formatter');
     
