@@ -127,7 +127,7 @@ function formatDurationFromMs(ms) {
   
   const minutes = Math.floor(ms / (1000 * 60));
   if (minutes > 0) return `${minutes} хв`;
-  return '< 1хв';
+  return '< 1 хв';
 }
 
 // Форматувати розмір пам'яті

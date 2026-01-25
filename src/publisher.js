@@ -28,7 +28,7 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
       const imageBuffer = await fetchScheduleImage(region, queue);
       
       // Відправляємо фото з підписом та кнопками
-      const sentMessage = await bot.sendPhoto(user.channel_id, Buffer.from(imageBuffer), {
+      const sentMessage = await bot.sendPhoto(user.channel_id, imageBuffer, {
         caption: messageText,
         parse_mode: 'HTML',
         reply_markup: inlineKeyboard

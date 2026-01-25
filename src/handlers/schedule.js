@@ -33,7 +33,7 @@ async function handleSchedule(bot, msg) {
     // Спробуємо відправити зображення графіка
     try {
       const imageBuffer = await fetchScheduleImage(user.region, user.queue);
-      await bot.sendPhoto(chatId, Buffer.from(imageBuffer), {
+      await bot.sendPhoto(chatId, imageBuffer, {
         caption: `📊 Графік для черги ${user.queue}`,
       });
     } catch (imgError) {
