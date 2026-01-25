@@ -6,10 +6,11 @@ let consecutiveChecks = 0;
 let isFirstCheck = true;
 const DEBOUNCE_COUNT = 2;
 
-async function checkRouterAvailability() {
-  const { ROUTER_HOST, ROUTER_PORT } = config;
+// Перевірка доступності роутера за IP
+async function checkRouterAvailability(routerIp = null) {
+  const ipToCheck = routerIp || config.ROUTER_HOST;
   
-  if (!ROUTER_HOST) {
+  if (!ipToCheck) {
     return null; // Моніторинг вимкнено
   }
   
@@ -17,7 +18,7 @@ async function checkRouterAvailability() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);
     
-    const response = await fetch(`http://${ROUTER_HOST}:${ROUTER_PORT}`, {
+    const response = await fetch(`http://${ipToCheck}:${config.ROUTER_PORT || 80}`, {
       signal: controller.signal,
       method: 'HEAD'
     });
