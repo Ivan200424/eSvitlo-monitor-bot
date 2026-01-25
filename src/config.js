@@ -14,7 +14,7 @@ const config = {
   // Моніторинг світла
   ROUTER_HOST: process.env.ROUTER_HOST || null,
   ROUTER_PORT: process.env.ROUTER_PORT || 80,
-  POWER_CHECK_INTERVAL: parseInt(process.env.POWER_CHECK_INTERVAL || '30', 10), // секунди
+  POWER_CHECK_INTERVAL: parseInt(process.env.POWER_CHECK_INTERVAL || '10', 10), // секунди
 };
 
 // Валідація обов'язкових параметрів

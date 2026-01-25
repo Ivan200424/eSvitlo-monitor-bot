@@ -32,6 +32,12 @@ function initializeDatabase() {
       alerts_on_enabled BOOLEAN DEFAULT 1,
       last_hash TEXT,
       last_post_id INTEGER,
+      power_state TEXT,
+      power_changed_at DATETIME,
+      last_alert_off_period TEXT,
+      last_alert_on_period TEXT,
+      alert_off_message_id INTEGER,
+      alert_on_message_id INTEGER,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );

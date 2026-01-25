@@ -1,10 +1,20 @@
 const config = require('./config');
+const usersDb = require('./database/users');
+const { addOutageRecord } = require('./statistics');
+const { formatExactDuration, formatTime } = require('./utils');
 
-let currentPowerState = null; // 'on' | 'off' | null
-let lastStateChangeAt = null;
-let consecutiveChecks = 0;
-let isFirstCheck = true;
-const DEBOUNCE_COUNT = 2;
+let bot = null;
+let monitoringInterval = null;
+const DEBOUNCE_COUNT = 5; // 5 перевірок = 5 * 10 секунд = 50 секунд
+const userStates = new Map(); // Зберігання стану для кожного користувача
+
+// Структура стану користувача:
+// {
+//   currentState: 'on' | 'off' | null,
+//   lastChangeAt: timestamp,
+//   consecutiveChecks: number,
+//   isFirstCheck: boolean
+// }
 
 // Перевірка доступності роутера за IP
 async function checkRouterAvailability(routerIp = null) {
@@ -43,52 +53,230 @@ async function checkRouterAvailability(routerIp = null) {
   }
 }
 
+// Отримати або створити стан користувача
+function getUserState(userId) {
+  if (!userStates.has(userId)) {
+    userStates.set(userId, {
+      currentState: null,
+      lastChangeAt: null,
+      consecutiveChecks: 0,
+      isFirstCheck: true
+    });
+  }
+  return userStates.get(userId);
+}
+
+// Отримати наступний заплановану подію з графіка
+async function getNextScheduledTime(user) {
+  try {
+    const { fetchScheduleData } = require('./api');
+    const { parseScheduleForQueue, findNextEvent } = require('./parser');
+    
+    const data = await fetchScheduleData(user.region);
+    const scheduleData = parseScheduleForQueue(data, user.queue);
+    const nextEvent = findNextEvent(scheduleData);
+    
+    return nextEvent;
+  } catch (error) {
+    console.error('Error getting next scheduled time:', error);
+    return null;
+  }
+}
+
+// Обробка зміни стану живлення
+async function handlePowerStateChange(user, newState, oldState, userState) {
+  try {
+    const now = new Date();
+    const changedAt = now.toISOString();
+    const timeStr = formatTime(now);
+    
+    // Оновлюємо стан в БД
+    usersDb.updateUserPowerState(user.telegram_id, newState, changedAt);
+    
+    // Якщо є попередній стан, обчислюємо тривалість
+    let durationText = '';
+    if (userState.lastChangeAt) {
+      const durationMs = now - new Date(userState.lastChangeAt);
+      const durationMinutes = Math.floor(durationMs / (1000 * 60));
+      durationText = formatExactDuration(durationMinutes);
+    }
+    
+    // Отримуємо наступну заплановану подію
+    const nextEvent = await getNextScheduledTime(user);
+    let scheduleText = '';
+    
+    if (nextEvent) {
+      const eventTime = formatTime(nextEvent.time);
+      if (newState === 'off') {
+        // Світло зникло - показуємо коли очікується включення
+        if (nextEvent.type === 'power_on') {
+          scheduleText = `\n🗓 Очікуємо за графіком о ${eventTime}`;
+        } else if (nextEvent.endTime) {
+          const endTime = formatTime(nextEvent.endTime);
+          scheduleText = `\n🗓 Наступне планове: ${eventTime} - ${endTime}`;
+        }
+      } else {
+        // Світло з'явилося - показуємо наступне відключення
+        if (nextEvent.type === 'power_off') {
+          if (nextEvent.endTime) {
+            const endTime = formatTime(nextEvent.endTime);
+            scheduleText = `\n🗓 Наступне планове: ${eventTime} - ${endTime}`;
+          } else {
+            scheduleText = `\n🗓 Наступне планове: ${eventTime}`;
+          }
+        }
+      }
+    }
+    
+    // Формуємо повідомлення
+    let message = '';
+    if (newState === 'off') {
+      message = `🔴 ${timeStr} Світло зникло`;
+      if (durationText) {
+        message += `\n🕓 Воно було ${durationText}`;
+      }
+      message += scheduleText;
+      
+      // Якщо є попередній стан 'on', зберігаємо запис про відключення
+      if (oldState === 'on' && userState.lastChangeAt) {
+        addOutageRecord(user.id, userState.lastChangeAt, changedAt);
+      }
+    } else {
+      message = `🟢 ${timeStr} Світло з'явилося`;
+      if (durationText) {
+        message += `\n🕓 Його не було ${durationText}`;
+      }
+      message += scheduleText;
+    }
+    
+    // Відправляємо в канал користувача, якщо він налаштований
+    if (user.channel_id) {
+      try {
+        await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
+        console.log(`📢 Повідомлення про зміну стану відправлено в канал ${user.channel_id}`);
+      } catch (error) {
+        console.error(`Помилка відправки повідомлення в канал ${user.channel_id}:`, error.message);
+      }
+    }
+    
+    // Оновлюємо стан користувача
+    userState.lastChangeAt = changedAt;
+    
+  } catch (error) {
+    console.error('Error handling power state change:', error);
+  }
+}
+
+// Перевірка стану живлення для одного користувача
+async function checkUserPower(user) {
+  try {
+    const isAvailable = await checkRouterAvailability(user.router_ip);
+    
+    if (isAvailable === null) {
+      return; // Не вдалося перевірити
+    }
+    
+    const newState = isAvailable ? 'on' : 'off';
+    const userState = getUserState(user.id);
+    
+    // Перша перевірка
+    if (userState.isFirstCheck) {
+      userState.currentState = newState;
+      userState.lastChangeAt = new Date().toISOString();
+      userState.isFirstCheck = false;
+      userState.consecutiveChecks = 0;
+      
+      // Оновлюємо БД
+      usersDb.updateUserPowerState(user.telegram_id, newState, userState.lastChangeAt);
+      return;
+    }
+    
+    // Дебаунс: чекаємо DEBOUNCE_COUNT підряд однакових результатів
+    if (userState.currentState === newState) {
+      // Стан не змінився, скидаємо лічильник
+      userState.consecutiveChecks = 0;
+      return;
+    }
+    
+    // Стан відрізняється від поточного, збільшуємо лічильник
+    userState.consecutiveChecks++;
+    
+    if (userState.consecutiveChecks >= DEBOUNCE_COUNT) {
+      // Достатньо послідовних перевірок з новим станом
+      const oldState = userState.currentState;
+      userState.currentState = newState;
+      userState.consecutiveChecks = 0;
+      
+      // Обробляємо зміну стану
+      await handlePowerStateChange(user, newState, oldState, userState);
+    }
+    
+  } catch (error) {
+    console.error(`Помилка перевірки живлення для користувача ${user.telegram_id}:`, error.message);
+  }
+}
+
+// Перевірка всіх користувачів
+async function checkAllUsers() {
+  try {
+    const users = usersDb.getUsersWithRouterIp();
+    
+    if (users.length === 0) {
+      return;
+    }
+    
+    // Перевіряємо кожного користувача
+    for (const user of users) {
+      await checkUserPower(user);
+    }
+    
+  } catch (error) {
+    console.error('Помилка при перевірці користувачів:', error);
+  }
+}
+
+// Запуск моніторингу живлення
+function startPowerMonitoring(botInstance) {
+  bot = botInstance;
+  
+  console.log('⚡ Запуск системи моніторингу живлення...');
+  console.log(`   Інтервал перевірки: ${config.POWER_CHECK_INTERVAL} секунд`);
+  console.log(`   Debounce: ${DEBOUNCE_COUNT} перевірок (${DEBOUNCE_COUNT * config.POWER_CHECK_INTERVAL} секунд)`);
+  
+  // Запускаємо періодичну перевірку
+  monitoringInterval = setInterval(async () => {
+    await checkAllUsers();
+  }, config.POWER_CHECK_INTERVAL * 1000);
+  
+  // Перша перевірка відразу
+  checkAllUsers();
+  
+  console.log('✅ Система моніторингу живлення запущена');
+}
+
+// Зупинка моніторингу
+function stopPowerMonitoring() {
+  if (monitoringInterval) {
+    clearInterval(monitoringInterval);
+    monitoringInterval = null;
+    console.log('⚡ Моніторинг живлення зупинено');
+  }
+}
+
+// Для сумісності з попереднім кодом
 function getPowerState() {
   return {
-    state: currentPowerState,
-    changedAt: lastStateChangeAt
+    state: null,
+    changedAt: null
   };
 }
 
 function updatePowerState(isAvailable) {
-  const newState = isAvailable ? 'on' : 'off';
-  
-  // Перша перевірка
-  if (isFirstCheck) {
-    currentPowerState = newState;
-    lastStateChangeAt = Date.now();
-    isFirstCheck = false;
-    consecutiveChecks = 0;
-    return { changed: false, state: currentPowerState };
-  }
-  
-  // Дебаунс: чекаємо DEBOUNCE_COUNT підряд однакових результатів
-  if (currentPowerState === newState) {
-    // Стан не змінився, скидаємо лічильник
-    consecutiveChecks = 0;
-    return { changed: false, state: currentPowerState };
-  }
-  
-  // Стан відрізняється від поточного, збільшуємо лічильник
-  consecutiveChecks++;
-  
-  if (consecutiveChecks >= DEBOUNCE_COUNT) {
-    // Достатньо послідовних перевірок з новим станом
-    const oldState = currentPowerState;
-    currentPowerState = newState;
-    lastStateChangeAt = Date.now();
-    consecutiveChecks = 0;
-    return { changed: true, state: currentPowerState, oldState };
-  }
-  
-  return { changed: false, state: currentPowerState };
+  return { changed: false, state: null };
 }
 
 function resetPowerMonitor() {
-  currentPowerState = null;
-  lastStateChangeAt = null;
-  consecutiveChecks = 0;
-  isFirstCheck = true;
+  userStates.clear();
 }
 
 module.exports = {
@@ -96,4 +284,8 @@ module.exports = {
   getPowerState,
   updatePowerState,
   resetPowerMonitor,
+  startPowerMonitoring,
+  stopPowerMonitoring,
+  getNextScheduledTime,
+  handlePowerStateChange,
 };

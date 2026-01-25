@@ -279,11 +279,12 @@ bot.on('callback_query', async (query) => {
   
   if (data.startsWith('stats_')) {
     const userId = parseInt(data.replace('stats_', ''));
-    const { getWeeklyStats, formatStatsMessage } = require('./statistics');
+    const { getWeeklyStats } = require('./statistics');
+    const { formatStatsForChannelPopup } = require('./formatter');
     
     try {
       const stats = getWeeklyStats(userId);
-      const message = formatStatsMessage(stats);
+      const message = formatStatsForChannelPopup(stats);
       await bot.answerCallbackQuery(query.id, { text: message, show_alert: true });
     } catch (error) {
       console.error('Error in stats callback:', error);

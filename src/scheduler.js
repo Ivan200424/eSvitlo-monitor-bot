@@ -82,29 +82,6 @@ async function checkUserSchedule(user, data) {
     const scheduleData = parseScheduleForQueue(data, user.queue);
     const nextEvent = findNextEvent(scheduleData);
     
-    // Відправляємо оновлення в особисті повідомлення
-    try {
-      const message = formatScheduleUpdateMessage(user.region, user.queue);
-      await bot.sendMessage(user.telegram_id, message, { parse_mode: 'HTML' });
-      
-      // Відправляємо графік
-      const scheduleMessage = formatScheduleMessage(user.region, user.queue, scheduleData, nextEvent);
-      await bot.sendMessage(user.telegram_id, scheduleMessage, { parse_mode: 'HTML' });
-      
-      // Спробуємо відправити зображення
-      try {
-        const imageUrl = getImageUrl(user.region, user.queue);
-        await bot.sendPhoto(user.telegram_id, imageUrl, {
-          caption: `📊 Оновлений графік для GPV${user.queue}`,
-        });
-      } catch (imgError) {
-        // Ігноруємо помилки з зображенням
-      }
-      
-    } catch (msgError) {
-      console.error(`Не вдалося відправити повідомлення користувачу ${user.telegram_id}:`, msgError.message);
-    }
-    
     // Якщо є канал, відправляємо туди
     if (user.channel_id) {
       try {
