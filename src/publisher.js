@@ -1,7 +1,6 @@
-const { fetchScheduleData, getImageUrl } = require('./api');
+const { fetchScheduleData, fetchScheduleImage } = require('./api');
 const { parseScheduleForQueue, findNextEvent } = require('./parser');
 const { formatScheduleMessage } = require('./formatter');
-const axios = require('axios');
 
 // Публікувати графік з фото та кнопками
 async function publishScheduleWithPhoto(bot, user, region, queue) {
@@ -24,24 +23,9 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
       ]
     };
     
-    // Отримуємо URL зображення
-    const imageUrl = getImageUrl(region, queue);
-    
     try {
-      // Спробуємо завантажити зображення
-      const response = await axios.get(imageUrl, { 
-        responseType: 'arraybuffer',
-        timeout: 10000,
-        validateStatus: (status) => status >= 200 && status < 300
-      });
-      
-      // Перевірка що це дійсно зображення
-      const contentType = response.headers['content-type'];
-      if (!contentType || !contentType.startsWith('image/')) {
-        throw new Error('Response is not an image');
-      }
-      
-      const imageBuffer = Buffer.from(response.data);
+      // Завантажуємо зображення як Buffer
+      const imageBuffer = await fetchScheduleImage(region, queue);
       
       // Відправляємо фото з підписом та кнопками
       const sentMessage = await bot.sendPhoto(user.channel_id, imageBuffer, {

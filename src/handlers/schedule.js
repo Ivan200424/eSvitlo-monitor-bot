@@ -1,5 +1,5 @@
 const usersDb = require('../database/users');
-const { fetchScheduleData, getImageUrl } = require('../api');
+const { fetchScheduleData, fetchScheduleImage } = require('../api');
 const { parseScheduleForQueue, findNextEvent } = require('../parser');
 const { formatScheduleMessage, formatNextEventMessage, formatTimerMessage } = require('../formatter');
 
@@ -32,9 +32,9 @@ async function handleSchedule(bot, msg) {
     
     // Спробуємо відправити зображення графіка
     try {
-      const imageUrl = getImageUrl(user.region, user.queue);
-      await bot.sendPhoto(chatId, imageUrl, {
-        caption: `📊 Графік для GPV${user.queue}`,
+      const imageBuffer = await fetchScheduleImage(user.region, user.queue);
+      await bot.sendPhoto(chatId, imageBuffer, {
+        caption: `📊 Графік для черги ${user.queue}`,
       });
     } catch (imgError) {
       // Якщо зображення недоступне, просто ігноруємо

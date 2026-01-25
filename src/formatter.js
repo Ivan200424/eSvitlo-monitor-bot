@@ -6,52 +6,78 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent) {
   const regionName = REGIONS[region]?.name || region;
   const lines = [];
   
-  lines.push(`📋 <b>Графік відключень</b>`);
-  lines.push(`📍 Регіон: ${escapeHtml(regionName)}`);
-  lines.push(`⚡️ Черга: GPV${queue}`);
-  lines.push('');
-  
   if (!scheduleData.hasData) {
+    lines.push(`💡 Графік відключень для черги ${queue}`);
+    lines.push('');
     lines.push('ℹ️ Немає даних про відключення');
     return lines.join('\n');
   }
   
-  // Поточний статус
-  const isOff = nextEvent && nextEvent.type === 'power_on';
-  if (isOff) {
-    lines.push(`🔴 <b>Зараз без світла</b>`);
-    lines.push(`⏰ Включення через: ${formatTimeRemaining(nextEvent.minutes)}`);
-    if (nextEvent.isPossible) {
-      lines.push('⚠️ Можливе відключення');
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const tomorrowEnd = new Date(tomorrowStart);
+  tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+  tomorrowEnd.setMilliseconds(-1);
+  
+  // Get day name
+  const dayNames = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+  const todayName = dayNames[now.getDay()];
+  const tomorrowName = dayNames[(now.getDay() + 1) % 7];
+  
+  // Format dates
+  const todayDate = formatDate(now);
+  const tomorrowDate = formatDate(tomorrowStart);
+  
+  // Split events by day
+  const todayEvents = [];
+  const tomorrowEvents = [];
+  
+  scheduleData.events.forEach(event => {
+    const eventStart = new Date(event.start);
+    if (eventStart >= todayStart && eventStart <= todayEnd) {
+      todayEvents.push(event);
+    } else if (eventStart >= tomorrowStart && eventStart <= tomorrowEnd) {
+      tomorrowEvents.push(event);
     }
-  } else if (nextEvent && nextEvent.type === 'power_off') {
-    lines.push(`🟢 <b>Зараз є світло</b>`);
-    lines.push(`⏰ Відключення через: ${formatTimeRemaining(nextEvent.minutes)}`);
-    if (nextEvent.isPossible) {
-      lines.push('⚠️ Можливе відключення');
-    }
+  });
+  
+  // Today's schedule
+  if (todayEvents.length > 0) {
+    lines.push(`💡 Оновлено графік відключень на сьогодні, ${todayDate} (${todayName}), для черги ${queue}:`);
+    lines.push('');
+    todayEvents.forEach(event => {
+      const start = formatTime(event.start);
+      const end = formatTime(event.end);
+      const durationMs = new Date(event.end) - new Date(event.start);
+      const durationStr = formatDurationFromMs(durationMs);
+      lines.push(`🪫 ${start} - ${end} (~${durationStr})`);
+    });
   } else {
-    lines.push('🟢 <b>Зараз є світло</b>');
-    lines.push('ℹ️ Наступні відключення не заплановані');
+    lines.push(`💡 Графік відключень на сьогодні, ${todayDate} (${todayName}), для черги ${queue}:`);
+    lines.push('');
+    lines.push('✅ Відключень не заплановано');
   }
   
   lines.push('');
   
-  // Список відключень
-  if (scheduleData.events.length > 0) {
-    lines.push('<b>Заплановані відключення:</b>');
-    scheduleData.events.forEach((event, index) => {
+  // Tomorrow's schedule
+  if (tomorrowEvents.length > 0) {
+    lines.push(`💡 Оновлено графік відключень на завтра, ${tomorrowDate} (${tomorrowName}), для черги ${queue}:`);
+    lines.push('');
+    tomorrowEvents.forEach(event => {
       const start = formatTime(event.start);
       const end = formatTime(event.end);
-      const date = formatDate(event.start);
-      
-      // Обчислити тривалість відключення
       const durationMs = new Date(event.end) - new Date(event.start);
       const durationStr = formatDurationFromMs(durationMs);
-      
-      const possible = event.isPossible ? ' (можливе)' : '';
-      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>${possible}`);
+      lines.push(`🪫 ${start} - ${end} (~${durationStr})`);
     });
+  } else {
+    lines.push(`💡 Графік відключень на завтра, ${tomorrowDate} (${tomorrowName}), для черги ${queue}:`);
+    lines.push('');
+    lines.push('✅ Відключень не заплановано');
   }
   
   return lines.join('\n');
@@ -220,21 +246,7 @@ function formatScheduleForChannel(region, queue, scheduleData, todayDate) {
   
   // Планові відключення
   if (todayPlanned.length > 0) {
-    lines.push('🔴 Відключення:');
     todayPlanned.forEach(event => {
-      const start = formatTime(event.start);
-      const end = formatTime(event.end);
-      const durationMs = event.end - event.start;
-      const durationStr = formatDurationFromMs(durationMs);
-      lines.push(`🪫 ${start} - ${end} (~${durationStr})`);
-    });
-    lines.push('');
-  }
-  
-  // Можливі відключення
-  if (todayPossible.length > 0) {
-    lines.push('🟡 Можливі:');
-    todayPossible.forEach(event => {
       const start = formatTime(event.start);
       const end = formatTime(event.end);
       const durationMs = event.end - event.start;

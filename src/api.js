@@ -5,6 +5,34 @@ const config = require('./config');
 const cache = new Map();
 const CACHE_TTL = 2 * 60 * 1000; // 2 хвилини
 
+// Fetch with retry logic
+async function fetchWithRetry(url, retries = 3) {
+  const delays = [5000, 15000, 45000];
+  
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await axios.get(url, { 
+        timeout: 30000,
+        responseType: url.endsWith('.png') ? 'arraybuffer' : 'json',
+        headers: {
+          'User-Agent': 'eSvitlo-Monitor-Bot/1.0',
+        },
+      });
+      return response.data;
+    } catch (error) {
+      const isLastRetry = i === retries - 1;
+      
+      if (isLastRetry) {
+        throw new Error(`Failed to fetch ${url} after ${retries} attempts: ${error.message}`);
+      }
+      
+      const delay = delays[i] || delays[delays.length - 1];
+      console.log(`Retry ${i + 1}/${retries} for ${url} after ${delay}ms`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+}
+
 // Отримати URL для даних регіону
 function getDataUrl(region) {
   return config.dataUrlTemplate.replace('{region}', region);
@@ -31,14 +59,7 @@ async function fetchScheduleData(region) {
   
   try {
     const url = getDataUrl(region);
-    const response = await axios.get(url, {
-      timeout: 10000,
-      headers: {
-        'User-Agent': 'eSvitlo-Monitor-Bot/1.0',
-      },
-    });
-    
-    const data = response.data;
+    const data = await fetchWithRetry(url);
     
     // Збереження в кеш
     cache.set(cacheKey, {
@@ -71,6 +92,14 @@ async function checkImageExists(region, queue) {
   }
 }
 
+// Fetch schedule image as Buffer
+async function fetchScheduleImage(region, queue) {
+  const [group, queueNum] = queue.split('.');
+  const url = `https://raw.githubusercontent.com/Baskerville42/outage-data-ua/main/images/${region}/gpv-${group}-${queueNum}-emergency.png`;
+  console.log(`Fetching schedule image from: ${url}`);
+  return await fetchWithRetry(url);
+}
+
 // Очистити кеш
 function clearCache() {
   cache.clear();
@@ -78,6 +107,7 @@ function clearCache() {
 
 module.exports = {
   fetchScheduleData,
+  fetchScheduleImage,
   getImageUrl,
   checkImageExists,
   clearCache,
