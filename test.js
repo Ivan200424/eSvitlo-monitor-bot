@@ -1,0 +1,138 @@
+#!/usr/bin/env node
+
+/**
+ * Тестовий скрипт для перевірки функціональності бота
+ * Без підключення до Telegram API
+ */
+
+const assert = require('assert');
+
+console.log('🧪 Запуск тестів...\n');
+
+// Test 1: Константи та регіони
+console.log('Test 1: Перевірка констант та регіонів');
+const { REGIONS, REGION_CODES, QUEUES, GROUPS, SUBGROUPS } = require('./src/constants/regions');
+
+assert.strictEqual(REGION_CODES.length, 4, 'Має бути 4 регіони');
+assert.strictEqual(QUEUES.length, 6, 'Має бути 6 черг (3 групи × 2 підгрупи)');
+assert.strictEqual(GROUPS.length, 3, 'Має бути 3 групи');
+assert.strictEqual(SUBGROUPS.length, 2, 'Має бути 2 підгрупи');
+assert(REGIONS.kyiv, 'Регіон Київ має існувати');
+assert.strictEqual(REGIONS.kyiv.name, 'Київ', 'Назва регіону має бути правильною');
+console.log('✓ Константи та регіони коректні\n');
+
+// Test 2: Утиліти
+console.log('Test 2: Перевірка утиліт');
+const utils = require('./src/utils');
+
+const hash1 = utils.calculateHash({ test: 'data' }, 'key1');
+const hash2 = utils.calculateHash({ test: 'data' }, 'key1');
+const hash3 = utils.calculateHash({ test: 'other' }, 'key1');
+assert.strictEqual(hash1, hash2, 'Однакові дані мають давати однаковий хеш');
+assert.notStrictEqual(hash1, hash3, 'Різні дані мають давати різний хеш');
+
+const escaped = utils.escapeHtml('<script>alert("test")</script>');
+assert(!escaped.includes('<script>'), 'HTML має бути екрановано');
+
+const uptime = utils.formatUptime(3665);
+assert(uptime.includes('г'), 'Uptime має містити години');
+
+const memory = utils.formatMemory(1024 * 1024 * 100);
+assert(memory.includes('MB'), 'Пам\'ять має бути в MB');
+
+console.log('✓ Утиліти працюють коректно\n');
+
+// Test 3: Форматування
+console.log('Test 3: Перевірка форматування повідомлень');
+const formatter = require('./src/formatter');
+
+const welcomeMsg = formatter.formatWelcomeMessage('Тест');
+assert(welcomeMsg.includes('Тест'), 'Welcome message має містити ім\'я');
+assert(welcomeMsg.includes('Привіт'), 'Welcome message має містити привітання');
+
+const helpMsg = formatter.formatHelpMessage();
+assert(helpMsg.includes('/start'), 'Help message має містити команди');
+assert(helpMsg.includes('Довідка'), 'Help message має містити заголовок');
+
+console.log('✓ Форматування повідомлень коректне\n');
+
+// Test 4: Parser
+console.log('Test 4: Перевірка парсера');
+const parser = require('./src/parser');
+
+const mockData = {
+  'GPV1.1': [
+    {
+      start: new Date(Date.now() + 3600000).toISOString(), // через 1 годину
+      end: new Date(Date.now() + 7200000).toISOString(), // через 2 години
+      type: 'planned',
+    }
+  ]
+};
+
+const scheduleData = parser.parseScheduleForQueue(mockData, '1.1');
+assert(scheduleData.hasData, 'Має бути розпарсена черга');
+assert.strictEqual(scheduleData.events.length, 1, 'Має бути 1 подія');
+assert.strictEqual(scheduleData.queue, '1.1', 'Черга має відповідати');
+
+const nextEvent = parser.findNextEvent(scheduleData);
+assert(nextEvent, 'Має бути знайдена наступна подія');
+assert.strictEqual(nextEvent.type, 'power_off', 'Наступна подія має бути відключення');
+
+console.log('✓ Парсер працює коректно\n');
+
+// Test 5: Клавіатури
+console.log('Test 5: Перевірка клавіатур');
+const keyboards = require('./src/keyboards/inline');
+
+const mainMenu = keyboards.getMainMenu();
+assert(mainMenu.reply_markup, 'Головне меню має мати reply_markup');
+assert(mainMenu.reply_markup.keyboard, 'Головне меню має мати клавіатуру');
+
+const regionKeyboard = keyboards.getRegionKeyboard();
+assert(regionKeyboard.reply_markup.inline_keyboard, 'Клавіатура регіонів має бути inline');
+assert(regionKeyboard.reply_markup.inline_keyboard.length > 0, 'Має бути хоча б один рядок кнопок');
+
+const groupKeyboard = keyboards.getGroupKeyboard();
+assert(groupKeyboard.reply_markup.inline_keyboard, 'Клавіатура груп має бути inline');
+
+const settingsKeyboard = keyboards.getSettingsKeyboard();
+assert(settingsKeyboard.reply_markup.inline_keyboard, 'Клавіатура налаштувань має бути inline');
+
+console.log('✓ Клавіатури коректні\n');
+
+// Test 6: API URLs
+console.log('Test 6: Перевірка API');
+const config = require('./src/config');
+
+assert(config.dataUrlTemplate, 'Має бути URL template для даних');
+assert(config.dataUrlTemplate.includes('{region}'), 'URL має містити placeholder для регіону');
+assert(config.imageUrlTemplate, 'Має бути URL template для зображень');
+assert(config.imageUrlTemplate.includes('{region}'), 'URL має містити placeholder для регіону');
+
+console.log('✓ API конфігурація коректна\n');
+
+// Test 7: Database schema (without actual DB connection)
+console.log('Test 7: Перевірка структури бази даних');
+const fs = require('fs');
+const dbPath = './src/database/db.js';
+const dbContent = fs.readFileSync(dbPath, 'utf8');
+
+assert(dbContent.includes('CREATE TABLE IF NOT EXISTS users'), 'Має бути створена таблиця users');
+assert(dbContent.includes('telegram_id'), 'Таблиця має містити telegram_id');
+assert(dbContent.includes('region'), 'Таблиця має містити region');
+assert(dbContent.includes('queue'), 'Таблиця має містити queue');
+assert(dbContent.includes('channel_id'), 'Таблиця має містити channel_id');
+assert(dbContent.includes('CREATE INDEX'), 'Мають бути створені індекси');
+
+console.log('✓ Структура бази даних коректна\n');
+
+// Summary
+console.log('═══════════════════════════════════════');
+console.log('✅ ВСІ ТЕСТИ ПРОЙДЕНО УСПІШНО!');
+console.log('═══════════════════════════════════════');
+console.log('\n📊 Статистика:');
+console.log(`   • Регіони: ${REGION_CODES.length}`);
+console.log(`   • Черги: ${QUEUES.length}`);
+console.log(`   • Тестів пройдено: 7`);
+console.log('\n✨ Бот готовий до розгортання!');
