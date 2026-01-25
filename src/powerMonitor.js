@@ -14,6 +14,19 @@ async function checkRouterAvailability(routerIp = null) {
     return null; // Моніторинг вимкнено
   }
   
+  // Валідація IP-адреси
+  const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (!ipRegex.test(ipToCheck)) {
+    console.error('Invalid IP address format:', ipToCheck);
+    return null;
+  }
+  
+  const octets = ipToCheck.split('.').map(Number);
+  if (octets.some(octet => octet < 0 || octet > 255)) {
+    console.error('Invalid IP address octets:', ipToCheck);
+    return null;
+  }
+  
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10000);

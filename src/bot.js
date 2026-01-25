@@ -80,10 +80,17 @@ bot.onText(/\/setip\s+(.+)/, async (msg, match) => {
   const telegramId = String(msg.from.id);
   const ip = match[1].trim();
   
-  // Проста валідація IP-адреси
+  // Валідація IP-адреси
   const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
   if (!ipRegex.test(ip)) {
     await bot.sendMessage(chatId, '❌ Невірний формат IP-адреси.\n\nПриклад: /setip 91.123.45.67');
+    return;
+  }
+  
+  // Перевірка що кожен октет в діапазоні 0-255
+  const octets = ip.split('.').map(Number);
+  if (octets.some(octet => octet < 0 || octet > 255)) {
+    await bot.sendMessage(chatId, '❌ Невірна IP-адреса. Кожне число має бути від 0 до 255.\n\nПриклад: /setip 91.123.45.67');
     return;
   }
   

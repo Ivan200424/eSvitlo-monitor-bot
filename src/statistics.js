@@ -90,75 +90,43 @@ function formatStatsMessage(stats) {
     return '📊 Статистика за тиждень:\n\n✅ Відключень не було';
   }
   
+  const { formatExactDuration } = require('./utils');
+  
   const lines = [];
   lines.push('📊 Статистика за тиждень:');
   lines.push('');
   lines.push(`⚡ Відключень: ${stats.count}`);
   
   // Форматувати загальний час
-  const totalHours = Math.floor(stats.totalMinutes / 60);
-  const totalMins = stats.totalMinutes % 60;
-  if (totalHours > 0 && totalMins > 0) {
-    lines.push(`🕓 Загальний час без світла: ${totalHours}год ${totalMins}хв`);
-  } else if (totalHours > 0) {
-    lines.push(`🕓 Загальний час без світла: ${totalHours}год`);
-  } else {
-    lines.push(`🕓 Загальний час без світла: ${totalMins}хв`);
-  }
+  const totalDuration = formatExactDuration(stats.totalMinutes);
+  lines.push(`🕓 Загальний час без світла: ${totalDuration}`);
   
   // Середня тривалість
-  const avgHours = Math.floor(stats.avgMinutes / 60);
-  const avgMins = stats.avgMinutes % 60;
-  if (avgHours > 0 && avgMins > 0) {
-    lines.push(`📉 Середня тривалість: ${avgHours}год ${avgMins}хв`);
-  } else if (avgHours > 0) {
-    lines.push(`📉 Середня тривалість: ${avgHours}год`);
-  } else {
-    lines.push(`📉 Середня тривалість: ${avgMins}хв`);
-  }
+  const avgDuration = formatExactDuration(stats.avgMinutes);
+  lines.push(`📉 Середня тривалість: ${avgDuration}`);
   
   // Найдовше відключення
   if (stats.longest) {
-    const longHours = Math.floor(stats.longest.duration_minutes / 60);
-    const longMins = stats.longest.duration_minutes % 60;
+    const longDuration = formatExactDuration(stats.longest.duration_minutes);
     const longDate = new Date(stats.longest.start_time);
     const longDateStr = `${String(longDate.getDate()).padStart(2, '0')}.${String(longDate.getMonth() + 1).padStart(2, '0')}`;
     const longStartTime = `${String(longDate.getHours()).padStart(2, '0')}:${String(longDate.getMinutes()).padStart(2, '0')}`;
     const longEndDate = new Date(stats.longest.end_time);
     const longEndTime = `${String(longEndDate.getHours()).padStart(2, '0')}:${String(longEndDate.getMinutes()).padStart(2, '0')}`;
     
-    let durationStr = '';
-    if (longHours > 0 && longMins > 0) {
-      durationStr = `${longHours}год ${longMins}хв`;
-    } else if (longHours > 0) {
-      durationStr = `${longHours}год`;
-    } else {
-      durationStr = `${longMins}хв`;
-    }
-    
-    lines.push(`🏆 Найдовше: ${durationStr} (${longDateStr} ${longStartTime}-${longEndTime})`);
+    lines.push(`🏆 Найдовше: ${longDuration} (${longDateStr} ${longStartTime}-${longEndTime})`);
   }
   
   // Найкоротше відключення
   if (stats.shortest) {
-    const shortHours = Math.floor(stats.shortest.duration_minutes / 60);
-    const shortMins = stats.shortest.duration_minutes % 60;
+    const shortDuration = formatExactDuration(stats.shortest.duration_minutes);
     const shortDate = new Date(stats.shortest.start_time);
     const shortDateStr = `${String(shortDate.getDate()).padStart(2, '0')}.${String(shortDate.getMonth() + 1).padStart(2, '0')}`;
     const shortStartTime = `${String(shortDate.getHours()).padStart(2, '0')}:${String(shortDate.getMinutes()).padStart(2, '0')}`;
     const shortEndDate = new Date(stats.shortest.end_time);
     const shortEndTime = `${String(shortEndDate.getHours()).padStart(2, '0')}:${String(shortEndDate.getMinutes()).padStart(2, '0')}`;
     
-    let durationStr = '';
-    if (shortHours > 0 && shortMins > 0) {
-      durationStr = `${shortHours}год ${shortMins}хв`;
-    } else if (shortHours > 0) {
-      durationStr = `${shortHours}год`;
-    } else {
-      durationStr = `${shortMins}хв`;
-    }
-    
-    lines.push(`🔋 Найкоротше: ${durationStr} (${shortDateStr} ${shortStartTime}-${shortEndTime})`);
+    lines.push(`🔋 Найкоротше: ${shortDuration} (${shortDateStr} ${shortStartTime}-${shortEndTime})`);
   }
   
   return lines.join('\n');
