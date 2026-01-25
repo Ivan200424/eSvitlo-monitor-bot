@@ -32,7 +32,7 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
       const response = await axios.get(imageUrl, { 
         responseType: 'arraybuffer',
         timeout: 10000,
-        validateStatus: (status) => status === 200
+        validateStatus: (status) => status >= 200 && status < 300
       });
       
       // Перевірка що це дійсно зображення
