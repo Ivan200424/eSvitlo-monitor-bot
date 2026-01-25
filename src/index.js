@@ -3,6 +3,7 @@
 const bot = require('./bot');
 const { initScheduler } = require('./scheduler');
 const { initAlerts } = require('./alerts');
+const { startPowerMonitoring, stopPowerMonitoring } = require('./powerMonitor');
 const config = require('./config');
 
 console.log('🚀 Запуск eSvitlo Monitor Bot...');
@@ -14,11 +15,18 @@ console.log(`💾 База даних: ${config.databasePath}`);
 initScheduler(bot);
 initAlerts(bot);
 
+// Ініціалізація моніторингу живлення
+startPowerMonitoring(bot);
+
 // Graceful shutdown
 const shutdown = async (signal) => {
   console.log(`\n${signal} отримано, завершення роботи...`);
   
   try {
+    // Зупиняємо моніторинг живлення
+    stopPowerMonitoring();
+    console.log('✅ Моніторинг живлення зупинено');
+    
     // Зупиняємо polling
     await bot.stopPolling();
     console.log('✅ Polling зупинено');

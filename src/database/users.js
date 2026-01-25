@@ -192,6 +192,49 @@ function updateUserRouterIp(telegramId, routerIp) {
   return result.changes > 0;
 }
 
+// Оновити стан живлення користувача
+function updateUserPowerState(telegramId, state, changedAt) {
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET power_state = ?, power_changed_at = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE telegram_id = ?
+  `);
+  
+  const result = stmt.run(state, changedAt, telegramId);
+  return result.changes > 0;
+}
+
+// Оновити період алерту користувача
+function updateUserAlertPeriod(telegramId, type, period, messageId = null) {
+  const periodField = type === 'off' ? 'last_alert_off_period' : 'last_alert_on_period';
+  const messageField = type === 'off' ? 'alert_off_message_id' : 'alert_on_message_id';
+  
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET ${periodField} = ?, ${messageField} = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE telegram_id = ?
+  `);
+  
+  const result = stmt.run(period, messageId, telegramId);
+  return result.changes > 0;
+}
+
+// Отримати всіх користувачів з налаштованим router_ip
+function getUsersWithRouterIp() {
+  const stmt = db.prepare('SELECT * FROM users WHERE router_ip IS NOT NULL AND router_ip != "" AND is_active = 1');
+  return stmt.all();
+}
+
+// Отримати користувачів з увімкненими алертами
+function getUsersWithAlertsEnabled() {
+  const stmt = db.prepare(`
+    SELECT * FROM users 
+    WHERE is_active = 1 
+    AND (alerts_off_enabled = 1 OR alerts_on_enabled = 1)
+  `);
+  return stmt.all();
+}
+
 module.exports = {
   createUser,
   getUserByTelegramId,
@@ -209,4 +252,8 @@ module.exports = {
   getUserStats,
   deleteUser,
   updateUserRouterIp,
+  updateUserPowerState,
+  updateUserAlertPeriod,
+  getUsersWithRouterIp,
+  getUsersWithAlertsEnabled,
 };

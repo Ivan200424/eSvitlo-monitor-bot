@@ -2,35 +2,27 @@ const cron = require('node-cron');
 const { fetchScheduleData } = require('./api');
 const { parseScheduleForQueue, findNextEvent } = require('./parser');
 const { formatPowerOffAlert, formatPowerOnAlert } = require('./formatter');
-const { getMinutesDifference } = require('./utils');
 const usersDb = require('./database/users');
 
 let bot = null;
-const sentAlerts = new Map(); // Кеш відправлених алертів
 
 // Ініціалізація системи алертів
-function initAlerts(botInstance) {
+function startAlertSystem(botInstance) {
   bot = botInstance;
-  console.log('🔔 Ініціалізація системи алертів...');
+  console.log('🔔 Запуск системи алертів...');
   
   // Перевірка алертів кожну хвилину
   cron.schedule('* * * * *', async () => {
-    await checkAlerts();
-  });
-  
-  // Очистка кешу відправлених алертів кожну годину
-  cron.schedule('0 * * * *', () => {
-    sentAlerts.clear();
-    console.log('🗑️  Кеш алертів очищено');
+    await checkAndSendAlerts();
   });
   
   console.log('✅ Система алертів запущена (перевірка кожну хвилину)');
 }
 
-// Перевірка всіх алертів
-async function checkAlerts() {
+// Перевірка та відправка всіх алертів
+async function checkAndSendAlerts() {
   try {
-    const users = usersDb.getAllActiveUsers();
+    const users = usersDb.getUsersWithAlertsEnabled();
     
     for (const user of users) {
       try {
@@ -60,20 +52,12 @@ async function checkUserAlerts(user) {
     
     // Перевіряємо алерт на відключення
     if (nextEvent.type === 'power_off' && user.alerts_off_enabled) {
-      const notifyAt = user.notify_before_off;
-      
-      if (shouldSendAlert(minutesUntil, notifyAt, user, 'off')) {
-        await sendAlert(user, 'off', minutesUntil, nextEvent.time);
-      }
+      await checkAndSendAlertOff(user, minutesUntil, nextEvent);
     }
     
-    // Перевіряємо алерт на включення
+    // Перевіряємо алерт на включення (коли зараз немає світла)
     if (nextEvent.type === 'power_on' && user.alerts_on_enabled) {
-      const notifyAt = user.notify_before_on;
-      
-      if (shouldSendAlert(minutesUntil, notifyAt, user, 'on')) {
-        await sendAlert(user, 'on', minutesUntil, nextEvent.time);
-      }
+      await checkAndSendAlertOn(user, minutesUntil, nextEvent);
     }
     
   } catch (error) {
@@ -81,61 +65,91 @@ async function checkUserAlerts(user) {
   }
 }
 
-// Перевірити чи потрібно відправити алерт
-function shouldSendAlert(minutesUntil, notifyAt, user, type) {
-  // Перевіряємо чи час відповідає налаштуванню (з толеранcією ±1 хвилина)
+// Перевірити та відправити алерт перед відключенням
+async function checkAndSendAlertOff(user, minutesUntil, nextEvent) {
+  const notifyAt = user.notify_before_off;
+  
+  // Перевіряємо чи час відповідає налаштуванню (з толерансією ±1 хвилина)
   if (Math.abs(minutesUntil - notifyAt) > 1) {
-    return false;
+    return;
   }
   
-  // Перевіряємо чи вже не відправляли цей алерт
-  const alertKey = `${user.telegram_id}_${type}_${notifyAt}`;
-  const now = Date.now();
-  const lastSent = sentAlerts.get(alertKey);
+  // Формуємо ключ періоду для перевірки дублікатів
+  const eventTime = new Date(nextEvent.time);
+  const periodKey = `${eventTime.getHours()}:${eventTime.getMinutes()}`;
   
-  // Не відправляємо алерт частіше ніж раз на 10 хвилин
-  if (lastSent && (now - lastSent) < 10 * 60 * 1000) {
-    return false;
+  // Перевіряємо чи вже не відправляли алерт для цього періоду
+  if (user.last_alert_off_period === periodKey) {
+    return;
   }
   
-  return true;
+  // Формуємо та відправляємо повідомлення
+  const message = formatPowerOffAlert(minutesUntil, nextEvent.time);
+  
+  try {
+    // Відправляємо в канал користувача
+    if (user.channel_id) {
+      const sentMsg = await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
+      
+      // Зберігаємо інформацію про відправлений алерт
+      usersDb.updateUserAlertPeriod(user.telegram_id, 'off', periodKey, sentMsg.message_id);
+      
+      console.log(`🔔 Алерт про відключення відправлено в канал ${user.channel_id}`);
+    }
+  } catch (error) {
+    console.error(`Помилка відправки алерту про відключення користувачу ${user.telegram_id}:`, error.message);
+  }
 }
 
-// Відправити алерт
-async function sendAlert(user, type, minutes, time) {
-  try {
-    let message;
-    
-    if (type === 'off') {
-      message = formatPowerOffAlert(minutes, time);
-    } else {
-      message = formatPowerOnAlert(minutes, time);
-    }
-    
-    // Відправляємо в особисті повідомлення
-    await bot.sendMessage(user.telegram_id, message, { parse_mode: 'HTML' });
-    
-    // Якщо є канал, відправляємо туди
-    if (user.channel_id) {
-      try {
-        await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
-      } catch (channelError) {
-        console.error(`Не вдалося відправити алерт в канал ${user.channel_id}:`, channelError.message);
-      }
-    }
-    
-    // Зберігаємо інформацію про відправлений алерт
-    const alertKey = `${user.telegram_id}_${type}_${user[`notify_before_${type}`]}`;
-    sentAlerts.set(alertKey, Date.now());
-    
-    console.log(`🔔 Алерт відправлено: ${user.telegram_id} (${type}, ${minutes} хв)`);
-    
-  } catch (error) {
-    console.error(`Помилка відправки алерту користувачу ${user.telegram_id}:`, error.message);
+// Перевірити та відправити алерт перед включенням
+async function checkAndSendAlertOn(user, minutesUntil, nextEvent) {
+  const notifyAt = user.notify_before_on;
+  
+  // Перевіряємо чи час відповідає налаштуванню (з толерансією ±1 хвилина)
+  if (Math.abs(minutesUntil - notifyAt) > 1) {
+    return;
   }
+  
+  // Формуємо ключ періоду для перевірки дублікатів
+  const eventTime = new Date(nextEvent.time);
+  const periodKey = `${eventTime.getHours()}:${eventTime.getMinutes()}`;
+  
+  // Перевіряємо чи вже не відправляли алерт для цього періоду
+  if (user.last_alert_on_period === periodKey) {
+    return;
+  }
+  
+  // Формуємо та відправляємо повідомлення
+  const message = formatPowerOnAlert(minutesUntil, nextEvent.time);
+  
+  try {
+    // Відправляємо в канал користувача
+    if (user.channel_id) {
+      const sentMsg = await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
+      
+      // Зберігаємо інформацію про відправлений алерт
+      usersDb.updateUserAlertPeriod(user.telegram_id, 'on', periodKey, sentMsg.message_id);
+      
+      console.log(`🔔 Алерт про включення відправлено в канал ${user.channel_id}`);
+    }
+  } catch (error) {
+    console.error(`Помилка відправки алерту про включення користувачу ${user.telegram_id}:`, error.message);
+  }
+}
+
+// Для сумісності зі старим кодом
+function initAlerts(botInstance) {
+  startAlertSystem(botInstance);
+}
+
+function checkAlerts() {
+  return checkAndSendAlerts();
 }
 
 module.exports = {
   initAlerts,
   checkAlerts,
+  startAlertSystem,
+  checkAndSendAlertOff,
+  checkAndSendAlertOn,
 };
