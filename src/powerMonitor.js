@@ -44,7 +44,7 @@ function updatePowerState(isAvailable) {
     currentPowerState = newState;
     lastStateChangeAt = Date.now();
     isFirstCheck = false;
-    consecutiveChecks = 1;
+    consecutiveChecks = 0;
     return { changed: false, state: currentPowerState };
   }
   
