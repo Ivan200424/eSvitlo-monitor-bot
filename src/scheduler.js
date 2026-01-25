@@ -83,9 +83,13 @@ async function checkUserSchedule(user, data) {
     const queueKey = `GPV${user.queue}`;
     const newHash = calculateHash(data, queueKey);
     
-    // Перевіряємо чи хеш змінився з останньої публікації (запобігаємо дублікатам при перезапуску)
+    // Діагностичне логування
+    console.log(`[${user.telegram_id}] Перевірка хешів: current=${newHash}, last_hash=${user.last_hash}, last_published_hash=${user.last_published_hash}`);
+    
+    // Перевіряємо чи графік вже опублікований з цим хешем
     if (newHash === user.last_published_hash) {
-      // Графік не змінився з останньої публікації, оновлюємо тільки last_hash
+      console.log(`[${user.telegram_id}] Графік вже опублікований, пропускаємо`);
+      // Графік вже опублікований, оновлюємо тільки last_hash якщо потрібно
       if (newHash !== user.last_hash) {
         usersDb.updateUserHash(user.id, newHash);
       }
@@ -95,12 +99,31 @@ async function checkUserSchedule(user, data) {
     // Перевіряємо чи хеш змінився з останньої перевірки
     const hasChanged = newHash !== user.last_hash;
     
-    if (!hasChanged) {
-      // Хеш не змінився з останньої перевірки, пропускаємо
-      return;
+    // Якщо є канал і графік ще не опублікований - публікуємо
+    if (user.channel_id) {
+      // Публікуємо якщо:
+      // 1. Хеш змінився (hasChanged = true), АБО
+      // 2. Хеш не змінився, але графік ще не опублікований (newHash !== last_published_hash)
+      const needsPublishing = hasChanged || (newHash !== user.last_published_hash);
+      
+      if (needsPublishing) {
+        if (hasChanged) {
+          console.log(`[${user.telegram_id}] Графік оновлено, публікуємо`);
+        } else {
+          console.log(`[${user.telegram_id}] Графік не змінився, але не був опублікований раніше - публікуємо`);
+        }
+      } else {
+        // Не змінився і вже в каналі
+        console.log(`[${user.telegram_id}] Графік не змінився і вже в каналі, пропускаємо`);
+        return;
+      }
+    } else {
+      // Немає каналу, тільки оновлюємо хеш якщо змінився
+      if (!hasChanged) {
+        return;
+      }
+      console.log(`[${user.telegram_id}] Графік оновлено (без каналу)`);
     }
-    
-    console.log(`Графік оновлено для користувача ${user.telegram_id} (${user.region}, ${user.queue})`);
     
     // Парсимо графік
     const scheduleData = parseScheduleForQueue(data, user.queue);
