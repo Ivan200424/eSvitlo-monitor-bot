@@ -192,8 +192,14 @@ function formatInterval(seconds) {
   } else {
     // 60+ секунд - показуємо в хвилинах
     const minutes = seconds / 60;
-    if (minutes === 1) return '1 хв';
-    return `${minutes} хв`;
+    // Якщо ділиться націло - показуємо як ціле число хвилин
+    if (Number.isInteger(minutes)) {
+      if (minutes === 1) return '1 хв';
+      return `${minutes} хв`;
+    } else {
+      // Якщо не ділиться націло - показуємо в секундах для точності
+      return `${seconds} секунд`;
+    }
   }
 }
 

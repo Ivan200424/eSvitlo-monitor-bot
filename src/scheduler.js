@@ -17,9 +17,9 @@ function initScheduler(botInstance) {
   // Перевірка графіків - використовуємо секунди з конфігу
   const intervalSeconds = config.checkIntervalSeconds;
   
-  // Якщо інтервал >= 60 секунд, використовуємо cron в хвилинах
-  // Якщо < 60 секунд, використовуємо setInterval
-  if (intervalSeconds >= 60) {
+  // Якщо інтервал >= 60 секунд і ділиться на 60 націло, використовуємо cron в хвилинах
+  // Інакше використовуємо setInterval
+  if (intervalSeconds >= 60 && intervalSeconds % 60 === 0) {
     const intervalMinutes = intervalSeconds / 60;
     const cronExpression = `*/${intervalMinutes} * * * *`;
     
@@ -28,7 +28,7 @@ function initScheduler(botInstance) {
       await checkAllSchedules();
     });
   } else {
-    // Для інтервалів < 60 секунд використовуємо setInterval
+    // Для інтервалів < 60 секунд або не кратних 60, використовуємо setInterval
     setInterval(async () => {
       console.log(`🔄 Перевірка графіків... (кожні ${formatInterval(intervalSeconds)})`);
       await checkAllSchedules();
