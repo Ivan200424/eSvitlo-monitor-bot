@@ -4,24 +4,24 @@ const crypto = require('crypto');
 function calculateHash(data, queueKey, todayTimestamp, tomorrowTimestamp) {
   try {
     // Отримуємо дані тільки для конкретної черги
-    const queueData = {
-      today: data?.fact?.data?.[todayTimestamp]?.[queueKey] || null,
-      tomorrow: data?.fact?.data?.[tomorrowTimestamp]?.[queueKey] || null,
-    };
+    const todayFact = data?.fact?.data?.[todayTimestamp]?.[queueKey] || {};
+    const tomorrowFact = data?.fact?.data?.[tomorrowTimestamp]?.[queueKey] || {};
     
     // Якщо немає даних для черги, повертаємо null
-    if (!queueData.today && !queueData.tomorrow) {
+    if (Object.keys(todayFact).length === 0 && Object.keys(tomorrowFact).length === 0) {
       return null;
     }
     
-    // Хешуємо ТІЛЬКИ дані графіка, БЕЗ timestamps
-    // Це гарантує що хеш буде однаковим якщо дані графіка не змінились
-    const hashData = JSON.stringify({
-      queue: queueKey,
-      schedule: queueData
-    });
+    // Хешуємо дані черги + стабільний timestamp з API
+    // ВАЖЛИВО: використовуємо data.fact.today замість параметра todayTimestamp
+    // бо data.fact.today - стабільний timestamp з API
+    const hashData = {
+      todayFact,
+      tomorrowFact,
+      todayTimestamp: data?.fact?.today || todayTimestamp
+    };
     
-    return crypto.createHash('md5').update(hashData).digest('hex');
+    return crypto.createHash('sha256').update(JSON.stringify(hashData)).digest('hex');
   } catch (error) {
     console.error('Помилка обчислення хешу:', error.message);
     return null;
