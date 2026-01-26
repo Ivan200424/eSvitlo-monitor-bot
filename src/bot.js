@@ -408,6 +408,43 @@ bot.on('callback_query', async (query) => {
     return;
   }
   
+  // Handle "Що змінилось" button
+  if (data.startsWith('changes_')) {
+    const userId = parseInt(data.replace('changes_', ''));
+    const user = usersDb.getUserById(userId);
+    
+    if (!user) {
+      await bot.answerCallbackQuery(query.id, { text: '❌ Користувача не знайдено' });
+      return;
+    }
+    
+    try {
+      const { getLastSchedule, getPreviousSchedule, compareSchedules } = require('./database/scheduleHistory');
+      const { formatScheduleChanges } = require('./formatter');
+      
+      const lastSchedule = getLastSchedule(user.id);
+      const previousSchedule = getPreviousSchedule(user.id);
+      
+      if (!lastSchedule || !previousSchedule) {
+        await bot.answerCallbackQuery(query.id, { 
+          text: 'Немає попереднього графіка для порівняння',
+          show_alert: true 
+        });
+        return;
+      }
+      
+      const changes = compareSchedules(previousSchedule.schedule_data, lastSchedule.schedule_data);
+      const message = formatScheduleChanges(changes);
+      
+      await bot.answerCallbackQuery(query.id, { text: message, show_alert: true });
+    } catch (error) {
+      console.error('Error in changes callback:', error);
+      await bot.answerCallbackQuery(query.id, { text: '❌ Помилка отримання змін' });
+    }
+    
+    return;
+  }
+  
   if (data.startsWith('stats_')) {
     const userId = parseInt(data.replace('stats_', ''));
     const user = usersDb.getUserById(userId);

@@ -2,7 +2,7 @@ const { formatTime, formatDate, formatTimeRemaining, escapeHtml, formatDurationF
 const { REGIONS } = require('./constants/regions');
 
 // Форматувати повідомлення про графік
-function formatScheduleMessage(region, queue, scheduleData, nextEvent) {
+function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes = null) {
   const regionName = REGIONS[region]?.name || region;
   const lines = [];
   
@@ -31,6 +31,15 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent) {
   const todayDate = formatDate(now);
   const tomorrowDate = formatDate(tomorrowStart);
   
+  // Create a set of new event keys for marking
+  const newEventKeys = new Set();
+  if (changes && changes.added) {
+    changes.added.forEach(event => {
+      const key = `${event.start}_${event.end}`;
+      newEventKeys.add(key);
+    });
+  }
+  
   // Split events by day
   const todayEvents = [];
   const tomorrowEvents = [];
@@ -53,7 +62,9 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent) {
       const end = formatTime(event.end);
       const durationMs = new Date(event.end) - new Date(event.start);
       const durationStr = formatDurationFromMs(durationMs);
-      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>`);
+      const key = `${event.start}_${event.end}`;
+      const isNew = newEventKeys.has(key);
+      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>${isNew ? ' 🆕' : ''}`);
     });
   } else {
     lines.push(`💡 Графік відключень <b>на сьогодні, ${todayDate} (${todayName})</b>, для черги ${queue}:`);
@@ -72,7 +83,9 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent) {
       const end = formatTime(event.end);
       const durationMs = new Date(event.end) - new Date(event.start);
       const durationStr = formatDurationFromMs(durationMs);
-      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>`);
+      const key = `${event.start}_${event.end}`;
+      const isNew = newEventKeys.has(key);
+      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>${isNew ? ' 🆕' : ''}`);
     });
   }
   
@@ -311,6 +324,53 @@ function formatStatsForChannelPopup(stats) {
   return lines.join('\n');
 }
 
+// Форматувати зміни графіка для popup
+function formatScheduleChanges(changes) {
+  if (!changes || (!changes.added.length && !changes.removed.length && !changes.modified.length)) {
+    return 'Немає змін';
+  }
+  
+  const lines = [];
+  lines.push('📝 <b>Зміни:</b>');
+  lines.push('');
+  
+  // Added periods
+  if (changes.added.length > 0) {
+    changes.added.forEach(event => {
+      const start = formatTime(event.start);
+      const end = formatTime(event.end);
+      lines.push(`➕ ${start}-${end}`);
+    });
+  }
+  
+  // Removed periods
+  if (changes.removed.length > 0) {
+    changes.removed.forEach(event => {
+      const start = formatTime(event.start);
+      const end = formatTime(event.end);
+      lines.push(`➖ ${start}-${end}`);
+    });
+  }
+  
+  // Modified periods
+  if (changes.modified.length > 0) {
+    changes.modified.forEach(({ old, new: newEvent }) => {
+      const oldStart = formatTime(old.start);
+      const oldEnd = formatTime(old.end);
+      const newStart = formatTime(newEvent.start);
+      const newEnd = formatTime(newEvent.end);
+      lines.push(`🔄 ${oldStart}-${oldEnd} → ${newStart}-${newEnd}`);
+    });
+  }
+  
+  if (changes.summary) {
+    lines.push('');
+    lines.push(`Всього: ${changes.summary}`);
+  }
+  
+  return lines.join('\n');
+}
+
 module.exports = {
   formatScheduleMessage,
   formatNextEventMessage,
@@ -322,4 +382,5 @@ module.exports = {
   formatHelpMessage,
   formatScheduleForChannel,
   formatStatsForChannelPopup,
+  formatScheduleChanges,
 };
