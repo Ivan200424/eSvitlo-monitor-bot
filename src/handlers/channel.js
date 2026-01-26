@@ -103,6 +103,14 @@ async function handleSetChannel(bot, msg, match) {
     
     // Перевіряємо чи бот є адміністратором з необхідними правами
     try {
+      // Get bot ID - it should be available but handle race condition
+      const botId = bot.options.id;
+      if (!botId) {
+        // Fallback: get bot info on the fly
+        const botInfo = await bot.getMe();
+        bot.options.id = botInfo.id;
+      }
+      
       const botMember = await bot.getChatMember(channelId, bot.options.id);
       
       if (botMember.status !== 'administrator') {
@@ -117,7 +125,7 @@ async function handleSetChannel(bot, msg, match) {
       }
       
       // Check specific permissions
-      if (!botMember.can_post_messages || !botMember.can_edit_messages) {
+      if (!botMember.can_post_messages || !botMember.can_change_info) {
         await bot.sendMessage(
           chatId,
           '❌ Бот не має необхідних прав.\n\n' +
