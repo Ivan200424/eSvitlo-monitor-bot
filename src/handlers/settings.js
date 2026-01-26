@@ -61,7 +61,6 @@ async function handleSettingsCallback(bot, query) {
       
       // Запускаємо wizard в режимі редагування
       const username = query.from.username || query.from.first_name;
-      const { startWizard } = require('./start');
       await startWizard(bot, chatId, telegramId, username, 'edit');
       
       await bot.answerCallbackQuery(query.id);
