@@ -117,7 +117,7 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
     let durationText = '';
     
     if (userState.lastStableAt) {
-      const totalDurationMs = now - new Date(userState.lastStableAt);
+      const totalDurationMs = originalChangeTime - new Date(userState.lastStableAt);
       const totalDurationMinutes = Math.floor(totalDurationMs / (1000 * 60));
       durationText = formatExactDuration(totalDurationMinutes);
     }
