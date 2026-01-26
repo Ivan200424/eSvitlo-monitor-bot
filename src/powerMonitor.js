@@ -5,7 +5,6 @@ const { formatExactDuration, formatTime, formatInterval } = require('./utils');
 
 let bot = null;
 let monitoringInterval = null;
-const DEBOUNCE_COUNT = 5; // 5 перевірок = 5 * 2 секунди = 10 секунд
 const userStates = new Map(); // Зберігання стану для кожного користувача
 
 // Структура стану користувача:

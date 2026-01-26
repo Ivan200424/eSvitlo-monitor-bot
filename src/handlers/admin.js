@@ -355,7 +355,7 @@ async function handleSetInterval(bot, msg, match) {
     
     // Зберігаємо в БД
     const key = type === 'schedule' ? 'schedule_check_interval' : 'power_check_interval';
-    setSetting(key, value);
+    setSetting(key, String(value));
     
     const typeName = type === 'schedule' ? 'перевірки графіка' : 'моніторингу світла';
     await bot.sendMessage(
@@ -399,14 +399,14 @@ async function handleSetDebounce(bot, msg, match) {
     }
     
     // Зберігаємо в БД
-    setSetting('power_debounce_minutes', value);
+    setSetting('power_debounce_minutes', String(value));
     
     await bot.sendMessage(
       chatId,
       `✅ Час debounce встановлено: ${value} хв\n\n` +
       'Нові зміни стану світла будуть публікуватись тільки після ' +
       `${value} хвилин стабільного стану.\n\n` +
-      '⚠️ Для застосування змін потрібен перезапуск бота.'
+      'Зміни застосуються автоматично при наступній перевірці.'
     );
     
   } catch (error) {
