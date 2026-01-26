@@ -214,7 +214,9 @@ function formatHelpMessage() {
   
   // Add bot version from package.json
   try {
-    const packageJson = require('../package.json');
+    const path = require('path');
+    const packageJsonPath = path.join(__dirname, '..', 'package.json');
+    const packageJson = require(packageJsonPath);
     lines.push(`<i>GridBot v${packageJson.version}</i>`);
   } catch (e) {
     lines.push('<i>GridBot</i>');

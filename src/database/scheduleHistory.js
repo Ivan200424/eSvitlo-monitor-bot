@@ -179,15 +179,15 @@ function compareSchedules(oldSchedule, newSchedule) {
   const parts = [];
   
   if (changes.added.length > 0) {
-    parts.push(`+${changes.added.length} період${changes.added.length > 1 ? 'и' : ''}`);
+    parts.push(`+${changes.added.length} період${changes.added.length === 1 ? '' : 'и'}`);
   }
   
   if (changes.removed.length > 0) {
-    parts.push(`-${changes.removed.length} період${changes.removed.length > 1 ? 'и' : ''}`);
+    parts.push(`-${changes.removed.length} період${changes.removed.length === 1 ? '' : 'и'}`);
   }
   
   if (changes.modified.length > 0) {
-    parts.push(`🔄 ${changes.modified.length} змінен${changes.modified.length > 1 ? 'о' : 'о'}`);
+    parts.push(`🔄 ${changes.modified.length} змінен${changes.modified.length === 1 ? 'о' : 'і'}`);
   }
 
   if (totalChangeMinutes !== 0) {
