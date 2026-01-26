@@ -14,7 +14,7 @@ const userStates = new Map(); // Зберігання стану для кожн
 //   lastChangeAt: timestamp,
 //   consecutiveChecks: number,
 //   isFirstCheck: boolean,
-//   pendingStateTime: timestamp | null - час першої зміни стану (до debounce)
+//   pendingStateTime: timestamp | null - time of first state change (before debounce)
 // }
 
 // Перевірка доступності роутера за IP
@@ -102,6 +102,8 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
     usersDb.updateUserPowerState(user.telegram_id, newState, changedAt);
     
     // Якщо є попередній стан, обчислюємо тривалість
+    // ВАЖЛИВО: Використовуємо 'now' для точного обчислення тривалості,
+    // а не 'originalChangeTime', щоб врахувати весь період стабільності
     let durationText = '';
     if (userState.lastChangeAt) {
       const durationMs = now - new Date(userState.lastChangeAt);
