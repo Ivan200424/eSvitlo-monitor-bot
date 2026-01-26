@@ -28,6 +28,7 @@ const utils = require('./src/utils');
 // Тест calculateHash з правильною структурою даних
 const testData1 = {
   fact: {
+    today: 1737849600, // Стабільний timestamp з API
     data: {
       1737849600: {
         'GPV1.1': { '1': 'yes', '2': 'no', '3': 'yes' }
@@ -42,6 +43,7 @@ const testData1 = {
 // Той самий графік, але з іншими timestamps
 const testData2 = {
   fact: {
+    today: 1737849600, // ВАЖЛИВО: той самий today як у testData1!
     data: {
       1737863200: { // Інший timestamp для "сьогодні"
         'GPV1.1': { '1': 'yes', '2': 'no', '3': 'yes' } // Ті самі дані!
@@ -56,6 +58,7 @@ const testData2 = {
 // Графік з іншими даними
 const testData3 = {
   fact: {
+    today: 1737849600,
     data: {
       1737849600: {
         'GPV1.1': { '1': 'no', '2': 'yes', '3': 'yes' } // Різні дані
@@ -118,6 +121,7 @@ const todayTimestamp = Math.floor(todayStart.getTime() / 1000);
 
 const mockData = {
   fact: {
+    today: todayTimestamp, // Додаємо стабільний timestamp з API
     data: {
       [todayTimestamp]: {
         'GPV1.1': {
