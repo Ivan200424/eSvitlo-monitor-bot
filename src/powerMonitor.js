@@ -13,7 +13,8 @@ const userStates = new Map(); // Зберігання стану для кожн
 //   currentState: 'on' | 'off' | null,
 //   lastChangeAt: timestamp,
 //   consecutiveChecks: number,
-//   isFirstCheck: boolean
+//   isFirstCheck: boolean,
+//   pendingStateTime: timestamp | null - час першої зміни стану (до debounce)
 // }
 
 // Перевірка доступності роутера за IP
@@ -60,7 +61,8 @@ function getUserState(userId) {
       currentState: null,
       lastChangeAt: null,
       consecutiveChecks: 0,
-      isFirstCheck: true
+      isFirstCheck: true,
+      pendingStateTime: null
     });
   }
   return userStates.get(userId);
@@ -87,8 +89,14 @@ async function getNextScheduledTime(user) {
 async function handlePowerStateChange(user, newState, oldState, userState) {
   try {
     const now = new Date();
-    const changedAt = now.toISOString();
-    const timeStr = formatTime(now);
+    
+    // Використовуємо час першої зміни стану (pendingStateTime), а не поточний час
+    const originalChangeTime = userState.pendingStateTime 
+      ? new Date(userState.pendingStateTime) 
+      : now;
+    
+    const changedAt = originalChangeTime.toISOString();
+    const timeStr = formatTime(originalChangeTime);
     
     // Оновлюємо стан в БД
     usersDb.updateUserPowerState(user.telegram_id, newState, changedAt);
@@ -162,6 +170,7 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
     
     // Оновлюємо стан користувача
     userState.lastChangeAt = changedAt;
+    userState.pendingStateTime = null; // Очищаємо pendingStateTime після обробки
     
   } catch (error) {
     console.error('Error handling power state change:', error);
@@ -194,13 +203,19 @@ async function checkUserPower(user) {
     
     // Дебаунс: чекаємо DEBOUNCE_COUNT підряд однакових результатів
     if (userState.currentState === newState) {
-      // Стан не змінився, скидаємо лічильник
+      // Стан не змінився, скидаємо лічильник та pendingStateTime
       userState.consecutiveChecks = 0;
+      userState.pendingStateTime = null;
       return;
     }
     
     // Стан відрізняється від поточного, збільшуємо лічильник
     userState.consecutiveChecks++;
+    
+    // Зберігаємо час першої зміни стану
+    if (userState.consecutiveChecks === 1) {
+      userState.pendingStateTime = new Date().toISOString();
+    }
     
     if (userState.consecutiveChecks >= DEBOUNCE_COUNT) {
       // Достатньо послідовних перевірок з новим станом
