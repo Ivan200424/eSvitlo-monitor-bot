@@ -173,10 +173,10 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
     
     if (newState === 'off') {
       // Світло зникло
-      message = `🔴 <b>Світло зникло!</b>\n\n`;
-      message += `🕐 ${timeStr} (Київ)`;
+      message = `🔴 Світла немає\n\n`;
+      message += `🕐 Час: ${timeStr}`;
       if (durationText) {
-        message += `\n⏱️ Було: ${durationText}`;
+        message += `\n⏱ Було: ${durationText}`;
       }
       
       // Якщо є попередній стан 'on', зберігаємо запис про відключення
@@ -185,15 +185,23 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
       }
     } else {
       // Світло з'явилося
-      message = `🟢 <b>Світло з'явилось!</b>\n\n`;
-      message += `🕐 ${timeStr} (Київ)`;
+      message = `🟢 Світло є\n\n`;
+      message += `🕐 Час: ${timeStr}`;
       if (durationText) {
-        message += `\n⏱️ Не було: ${durationText}`;
+        message += `\n⏱ Не було: ${durationText}`;
       }
     }
     
-    // Відправляємо в канал користувача, якщо він налаштований
-    if (user.channel_id) {
+    // Відправляємо повідомлення в особистий чат користувача
+    try {
+      await bot.sendMessage(user.telegram_id, message, { parse_mode: 'HTML' });
+      console.log(`📱 Повідомлення про зміну стану відправлено користувачу ${user.telegram_id}`);
+    } catch (error) {
+      console.error(`Помилка відправки повідомлення користувачу ${user.telegram_id}:`, error.message);
+    }
+    
+    // Відправляємо в канал користувача, якщо він налаштований і відрізняється від особистого чату
+    if (user.channel_id && user.channel_id !== user.telegram_id) {
       try {
         await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
         console.log(`📢 Повідомлення про зміну стану відправлено в канал ${user.channel_id}`);

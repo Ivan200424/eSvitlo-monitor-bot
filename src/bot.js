@@ -172,11 +172,35 @@ bot.on('callback_query', async (query) => {
     
     // Statistics callbacks
     if (data.startsWith('stats_')) {
-      // For now, just acknowledge
-      await bot.answerCallbackQuery(query.id, {
-        text: 'Ця функція ще в розробці',
-        show_alert: true
-      });
+      const usersDb = require('./database/users');
+      const { getWeeklyStats, formatStatsPopup } = require('./statistics');
+      
+      try {
+        const telegramId = String(query.from.id);
+        const user = usersDb.getUserByTelegramId(telegramId);
+        
+        if (!user) {
+          await bot.answerCallbackQuery(query.id, {
+            text: '❌ Користувач не знайдений',
+            show_alert: true
+          });
+          return;
+        }
+        
+        const stats = getWeeklyStats(user.id);
+        const message = formatStatsPopup(stats);
+        
+        await bot.answerCallbackQuery(query.id, {
+          text: message,
+          show_alert: true
+        });
+      } catch (error) {
+        console.error('Помилка отримання статистики:', error);
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Помилка отримання статистики',
+          show_alert: true
+        });
+      }
       return;
     }
     

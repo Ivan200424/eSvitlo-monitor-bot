@@ -52,9 +52,13 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
         { text: '🔍 Що змінилось', callback_data: `changes_${user.id}` },
         { text: '⏰ Таймер', callback_data: `timer_${user.id}` }
       ]);
+      buttons.push([
+        { text: '📊 Статистика', callback_data: `stats_${user.id}` }
+      ]);
     } else {
       buttons.push([
-        { text: '⏰ Таймер', callback_data: `timer_${user.id}` }
+        { text: '⏰ Таймер', callback_data: `timer_${user.id}` },
+        { text: '📊 Статистика', callback_data: `stats_${user.id}` }
       ]);
     }
     

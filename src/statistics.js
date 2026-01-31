@@ -132,8 +132,26 @@ function formatStatsMessage(stats) {
   return lines.join('\n');
 }
 
+// Форматувати повідомлення статистики для popup (коротка версія до 200 символів)
+function formatStatsPopup(stats) {
+  if (stats.count === 0) {
+    return '📊 Статистика за 7 днів:\n\n✅ Відключень не було';
+  }
+  
+  const totalHours = (stats.totalMinutes / 60).toFixed(1);
+  const avgHours = (stats.avgMinutes / 60).toFixed(1);
+  
+  let message = '📊 Статистика за 7 днів:\n\n';
+  message += `⚡ Відключень: ${stats.count}\n`;
+  message += `⏱ Без світла: ${totalHours} год\n`;
+  message += `📈 Середнє: ${avgHours} год`;
+  
+  return message;
+}
+
 module.exports = {
   addOutageRecord,
   getWeeklyStats,
   formatStatsMessage,
+  formatStatsPopup,
 };

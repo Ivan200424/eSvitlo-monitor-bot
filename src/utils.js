@@ -192,6 +192,43 @@ function formatInterval(seconds) {
   }
 }
 
+// Форматувати тривалість в секундах згідно з вимогами Task 7
+function formatDuration(seconds) {
+  if (seconds < 60) {
+    return '< 1 хв';
+  }
+  
+  const totalMinutes = Math.floor(seconds / 60);
+  const totalHours = Math.floor(totalMinutes / 60);
+  const totalDays = Math.floor(totalHours / 24);
+  
+  if (totalDays >= 1) {
+    const hours = totalHours % 24;
+    // Proper Ukrainian pluralization for days
+    let dayWord = 'день';
+    if (totalDays >= 5 || totalDays === 0) {
+      dayWord = 'днів';
+    } else if (totalDays >= 2) {
+      dayWord = 'дні';
+    }
+    
+    if (hours > 0) {
+      return `${totalDays} ${dayWord} ${hours} год`;
+    }
+    return `${totalDays} ${dayWord}`;
+  }
+  
+  if (totalHours >= 1) {
+    const minutes = totalMinutes % 60;
+    if (minutes > 0) {
+      return `${totalHours} год ${minutes} хв`;
+    }
+    return `${totalHours} год`;
+  }
+  
+  return `${totalMinutes} хв`;
+}
+
 module.exports = {
   calculateHash,
   formatTime,
@@ -208,4 +245,5 @@ module.exports = {
   formatDurationFromMs,
   formatExactDuration,
   formatInterval,
+  formatDuration,
 };
