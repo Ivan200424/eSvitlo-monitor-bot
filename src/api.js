@@ -6,14 +6,14 @@ const cache = new Map();
 const CACHE_TTL = 2 * 60 * 1000; // 2 хвилини
 
 // Fetch with retry logic
-async function fetchWithRetry(url, retries = 3) {
+async function fetchWithRetry(url, retries = 3, isImage = false) {
   const delays = [5000, 15000, 45000];
   
   for (let i = 0; i < retries; i++) {
     try {
       const response = await axios.get(url, { 
         timeout: 30000,
-        responseType: url.endsWith('.png') ? 'arraybuffer' : 'json',
+        responseType: isImage ? 'arraybuffer' : 'json',
         headers: {
           'User-Agent': 'eSvitlo-Monitor-Bot/1.0',
         },
@@ -57,7 +57,7 @@ async function fetchScheduleData(region) {
   
   try {
     const url = getDataUrl(region);
-    const data = await fetchWithRetry(url);
+    const data = await fetchWithRetry(url, 3, false);
     
     // Збереження в кеш
     cache.set(cacheKey, {
@@ -96,7 +96,8 @@ async function fetchScheduleImage(region, queue) {
   const baseUrl = getImageUrl(region, queue);
   const url = `${baseUrl}?t=${timestamp}`;
   console.log(`Fetching schedule image from: ${url}`);
-  return await fetchWithRetry(url);
+  // Явно вказуємо що це зображення для arraybuffer
+  return await fetchWithRetry(url, 3, true);
 }
 
 // Очистити кеш
