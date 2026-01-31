@@ -192,6 +192,35 @@ function formatInterval(seconds) {
   }
 }
 
+// Форматувати тривалість в секундах згідно з вимогами Task 7
+function formatDuration(seconds) {
+  if (seconds < 60) {
+    return '< 1 хв';
+  }
+  
+  const totalMinutes = Math.floor(seconds / 60);
+  const totalHours = Math.floor(totalMinutes / 60);
+  const totalDays = Math.floor(totalHours / 24);
+  
+  if (totalDays >= 1) {
+    const hours = totalHours % 24;
+    if (hours > 0) {
+      return `${totalDays} день ${hours} год`;
+    }
+    return `${totalDays} день`;
+  }
+  
+  if (totalHours >= 1) {
+    const minutes = totalMinutes % 60;
+    if (minutes > 0) {
+      return `${totalHours} год ${minutes} хв`;
+    }
+    return `${totalHours} год`;
+  }
+  
+  return `${totalMinutes} хв`;
+}
+
 module.exports = {
   calculateHash,
   formatTime,
@@ -208,4 +237,5 @@ module.exports = {
   formatDurationFromMs,
   formatExactDuration,
   formatInterval,
+  formatDuration,
 };
