@@ -138,8 +138,6 @@ function formatStatsPopup(stats) {
     return '📊 Статистика за 7 днів:\n\n✅ Відключень не було';
   }
   
-  const { formatExactDuration } = require('./utils');
-  
   const totalHours = (stats.totalMinutes / 60).toFixed(1);
   const avgHours = (stats.avgMinutes / 60).toFixed(1);
   

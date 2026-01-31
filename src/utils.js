@@ -204,10 +204,18 @@ function formatDuration(seconds) {
   
   if (totalDays >= 1) {
     const hours = totalHours % 24;
-    if (hours > 0) {
-      return `${totalDays} день ${hours} год`;
+    // Proper Ukrainian pluralization for days
+    let dayWord = 'день';
+    if (totalDays >= 5 || totalDays === 0) {
+      dayWord = 'днів';
+    } else if (totalDays >= 2) {
+      dayWord = 'дні';
     }
-    return `${totalDays} день`;
+    
+    if (hours > 0) {
+      return `${totalDays} ${dayWord} ${hours} год`;
+    }
+    return `${totalDays} ${dayWord}`;
   }
   
   if (totalHours >= 1) {
