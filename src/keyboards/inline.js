@@ -1,16 +1,22 @@
-const { REGIONS, GROUPS, SUBGROUPS } = require('../constants/regions');
+const { REGIONS, GROUPS, SUBGROUPS, QUEUES } = require('../constants/regions');
 
 // Головне меню після /start для існуючих користувачів
 function getMainMenu() {
   return {
     reply_markup: {
-      keyboard: [
-        ['📊 Графік', '⏱ Таймер'],
-        ['📈 Статистика', '❓ Допомога'],
-        ['⚙️ Налаштування'],
+      inline_keyboard: [
+        [
+          { text: '📊 Графік', callback_data: 'menu_schedule' },
+          { text: '⏱ Таймер', callback_data: 'menu_timer' }
+        ],
+        [
+          { text: '📈 Статистика', callback_data: 'menu_stats' },
+          { text: '❓ Допомога', callback_data: 'menu_help' }
+        ],
+        [
+          { text: '⚙️ Налаштування', callback_data: 'menu_settings' }
+        ],
       ],
-      resize_keyboard: true,
-      persistent: true,
     },
   };
 }
