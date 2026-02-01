@@ -1527,13 +1527,15 @@ async function applyChannelBranding(bot, chatId, telegramId, state) {
       botStatus = 'paused';
     }
     
+    const channelPaused = user.channel_paused === 1;
+    
     const { getMainMenu } = require('../keyboards/inline');
     await bot.sendMessage(
       chatId,
       '🏠 <b>Головне меню</b>',
       {
         parse_mode: 'HTML',
-        ...getMainMenu(botStatus),
+        ...getMainMenu(botStatus, channelPaused),
       }
     );
     

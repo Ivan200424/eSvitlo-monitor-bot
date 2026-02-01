@@ -74,6 +74,8 @@ async function handleStart(bot, msg) {
         botStatus = 'paused';
       }
       
+      const channelPaused = user.channel_paused === 1;
+      
       // Build main menu message
       let message = '<b>🚧 Бот у розробці</b>\n';
       message += '<i>Деякі функції можуть працювати нестабільно</i>\n\n';
@@ -89,7 +91,7 @@ async function handleStart(bot, msg) {
         message,
         {
           parse_mode: 'HTML',
-          ...getMainMenu(botStatus)
+          ...getMainMenu(botStatus, channelPaused)
         }
       );
       lastMenuMessages.set(telegramId, sentMessage.message_id);
@@ -194,12 +196,14 @@ async function handleWizardCallback(bot, query) {
           botStatus = 'paused';
         }
         
+        const channelPaused = user.channel_paused === 1;
+        
         await bot.sendMessage(
           chatId,
           '🏠 <b>Головне меню</b>',
           {
             parse_mode: 'HTML',
-            ...getMainMenu(botStatus),
+            ...getMainMenu(botStatus, channelPaused),
           }
         );
       } else {
@@ -223,7 +227,7 @@ async function handleWizardCallback(bot, query) {
         
         // Відправляємо головне меню і зберігаємо ID
         const botStatus = 'no_channel'; // New user won't have channel yet
-        const sentMessage = await bot.sendMessage(chatId, 'Головне меню:', getMainMenu(botStatus));
+        const sentMessage = await bot.sendMessage(chatId, 'Головне меню:', getMainMenu(botStatus, false));
         lastMenuMessages.set(telegramId, sentMessage.message_id);
       }
       
