@@ -335,6 +335,134 @@ async function handleConversation(bot, msg) {
       }
     }
     
+    if (state.state === 'waiting_for_schedule_caption') {
+      if (!text || text.trim().length === 0) {
+        await bot.sendMessage(chatId, '❌ Шаблон не може бути пустим. Спробуйте ще раз або /cancel:');
+        return true;
+      }
+      
+      usersDb.updateUserFormatSettings(telegramId, { scheduleCaption: text.trim() });
+      
+      await bot.sendMessage(chatId, '✅ Шаблон підпису оновлено!', { parse_mode: 'HTML' });
+      
+      // Return to format settings menu
+      const user = usersDb.getUserByTelegramId(telegramId);
+      const { getFormatSettingsKeyboard } = require('../keyboards/inline');
+      await bot.sendMessage(
+        chatId,
+        '📋 <b>Формат публікацій</b>\n\n' +
+        'Налаштуйте формат повідомлень для вашого каналу:',
+        {
+          parse_mode: 'HTML',
+          ...getFormatSettingsKeyboard(user)
+        }
+      );
+      
+      conversationStates.delete(telegramId);
+      return true;
+    }
+    
+    if (state.state === 'waiting_for_period_format') {
+      if (!text || text.trim().length === 0) {
+        await bot.sendMessage(chatId, '❌ Формат не може бути пустим. Спробуйте ще раз або /cancel:');
+        return true;
+      }
+      
+      usersDb.updateUserFormatSettings(telegramId, { periodFormat: text.trim() });
+      
+      await bot.sendMessage(chatId, '✅ Формат періодів оновлено!', { parse_mode: 'HTML' });
+      
+      // Return to format settings menu
+      const user = usersDb.getUserByTelegramId(telegramId);
+      const { getFormatSettingsKeyboard } = require('../keyboards/inline');
+      await bot.sendMessage(
+        chatId,
+        '📋 <b>Формат публікацій</b>\n\n' +
+        'Налаштуйте формат повідомлень для вашого каналу:',
+        {
+          parse_mode: 'HTML',
+          ...getFormatSettingsKeyboard(user)
+        }
+      );
+      
+      conversationStates.delete(telegramId);
+      return true;
+    }
+    
+    if (state.state === 'waiting_for_power_off_text') {
+      if (!text || text.trim().length === 0) {
+        await bot.sendMessage(chatId, '❌ Текст не може бути пустим. Спробуйте ще раз або /cancel:');
+        return true;
+      }
+      
+      usersDb.updateUserFormatSettings(telegramId, { powerOffText: text.trim() });
+      
+      await bot.sendMessage(chatId, '✅ Текст відключення оновлено!', { parse_mode: 'HTML' });
+      
+      // Return to format settings menu
+      const user = usersDb.getUserByTelegramId(telegramId);
+      const { getFormatSettingsKeyboard } = require('../keyboards/inline');
+      await bot.sendMessage(
+        chatId,
+        '📋 <b>Формат публікацій</b>\n\n' +
+        'Налаштуйте формат повідомлень для вашого каналу:',
+        {
+          parse_mode: 'HTML',
+          ...getFormatSettingsKeyboard(user)
+        }
+      );
+      
+      conversationStates.delete(telegramId);
+      return true;
+    }
+    
+    if (state.state === 'waiting_for_power_on_text') {
+      if (!text || text.trim().length === 0) {
+        await bot.sendMessage(chatId, '❌ Текст не може бути пустим. Спробуйте ще раз або /cancel:');
+        return true;
+      }
+      
+      usersDb.updateUserFormatSettings(telegramId, { powerOnText: text.trim() });
+      
+      await bot.sendMessage(chatId, '✅ Текст включення оновлено!', { parse_mode: 'HTML' });
+      
+      // Return to format settings menu
+      const user = usersDb.getUserByTelegramId(telegramId);
+      const { getFormatSettingsKeyboard } = require('../keyboards/inline');
+      await bot.sendMessage(
+        chatId,
+        '📋 <b>Формат публікацій</b>\n\n' +
+        'Налаштуйте формат повідомлень для вашого каналу:',
+        {
+          parse_mode: 'HTML',
+          ...getFormatSettingsKeyboard(user)
+        }
+      );
+      
+      conversationStates.delete(telegramId);
+      return true;
+    }
+    
+    if (state.state === 'waiting_for_custom_test') {
+      if (!text || text.trim().length === 0) {
+        await bot.sendMessage(chatId, '❌ Текст не може бути пустим. Спробуйте ще раз або /cancel:');
+        return true;
+      }
+      
+      const user = usersDb.getUserByTelegramId(telegramId);
+      
+      try {
+        await bot.sendMessage(user.channel_id, text.trim(), { parse_mode: 'HTML' });
+        await bot.sendMessage(chatId, '✅ Повідомлення опубліковано в канал!', { parse_mode: 'HTML' });
+      } catch (error) {
+        console.error('Error publishing custom test:', error);
+        await bot.sendMessage(chatId, '❌ Помилка публікації. Перевірте формат повідомлення.');
+      }
+      
+      conversationStates.delete(telegramId);
+      return true;
+    }
+    
   } catch (error) {
     console.error('Помилка в handleConversation:', error);
     await bot.sendMessage(chatId, '😅 Щось пішло не так. Спробуй ще раз командою /setchannel');
@@ -717,11 +845,369 @@ async function handleChannelCallback(bot, query) {
         state.userDescription = null;
         await applyChannelBranding(bot, chatId, telegramId, state);
         conversationStates.delete(telegramId);
-        
         await bot.deleteMessage(chatId, query.message.message_id);
         await bot.answerCallbackQuery(query.id);
         return;
       }
+    }
+    
+    // Handle channel_format - show format settings menu
+    if (data === 'channel_format') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      const { getFormatSettingsKeyboard } = require('../keyboards/inline');
+      await bot.editMessageText(
+        '📋 <b>Формат публікацій</b>\n\n' +
+        'Налаштуйте формат повідомлень для вашого каналу:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getFormatSettingsKeyboard(user).reply_markup
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle format_header_* - ignore header clicks
+    if (data.startsWith('format_header_')) {
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle format_toggle_delete - toggle delete old message
+    if (data === 'format_toggle_delete') {
+      const newValue = !user.delete_old_message;
+      usersDb.updateUserFormatSettings(telegramId, { deleteOldMessage: newValue });
+      
+      await bot.answerCallbackQuery(query.id, {
+        text: newValue ? '✅ Буде видалятись попереднє' : '❌ Не видалятиметься'
+      });
+      
+      const updatedUser = usersDb.getUserByTelegramId(telegramId);
+      const { getFormatSettingsKeyboard } = require('../keyboards/inline');
+      await bot.editMessageText(
+        '📋 <b>Формат публікацій</b>\n\n' +
+        'Налаштуйте формат повідомлень для вашого каналу:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getFormatSettingsKeyboard(updatedUser).reply_markup
+        }
+      );
+      return;
+    }
+    
+    // Handle format_toggle_piconly - toggle picture only
+    if (data === 'format_toggle_piconly') {
+      const newValue = !user.picture_only;
+      usersDb.updateUserFormatSettings(telegramId, { pictureOnly: newValue });
+      
+      await bot.answerCallbackQuery(query.id, {
+        text: newValue ? '✅ Тільки картинка' : '❌ Картинка з підписом'
+      });
+      
+      const updatedUser = usersDb.getUserByTelegramId(telegramId);
+      const { getFormatSettingsKeyboard } = require('../keyboards/inline');
+      await bot.editMessageText(
+        '📋 <b>Формат публікацій</b>\n\n' +
+        'Налаштуйте формат повідомлень для вашого каналу:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getFormatSettingsKeyboard(updatedUser).reply_markup
+        }
+      );
+      return;
+    }
+    
+    // Handle format_schedule_caption - edit schedule caption template
+    if (data === 'format_schedule_caption') {
+      conversationStates.set(telegramId, {
+        state: 'waiting_for_schedule_caption',
+        previousMessageId: query.message.message_id
+      });
+      
+      const currentTemplate = user.schedule_caption || 'Графік на {dd}, {dm} для черги {queue}';
+      
+      await bot.editMessageText(
+        '📝 <b>Шаблон підпису під графіком</b>\n\n' +
+        'Доступні змінні:\n' +
+        '• {d} - дата (01.02.2026)\n' +
+        '• {dm} - дата коротко (01.02)\n' +
+        '• {dd} - "сьогодні" або "завтра"\n' +
+        '• {sdw} - Пн, Вт, Ср...\n' +
+        '• {fdw} - Понеділок, Вівторок...\n' +
+        '• {queue} - номер черги (3.1)\n' +
+        '• {region} - назва регіону\n' +
+        '• <br> - новий рядок\n\n' +
+        `Поточний шаблон:\n<code>${currentTemplate}</code>\n\n` +
+        'Введіть новий шаблон або /cancel для скасування:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle format_schedule_periods - edit period format template
+    if (data === 'format_schedule_periods') {
+      conversationStates.set(telegramId, {
+        state: 'waiting_for_period_format',
+        previousMessageId: query.message.message_id
+      });
+      
+      const currentTemplate = user.period_format || '{s} - {f} ({h} год)';
+      
+      await bot.editMessageText(
+        '⏰ <b>Формат періодів відключень</b>\n\n' +
+        'Доступні змінні:\n' +
+        '• {s} - початок (08:00)\n' +
+        '• {f} - кінець (12:00)\n' +
+        '• {h} - тривалість (4)\n\n' +
+        'Можна використовувати HTML теги:\n' +
+        '<b>жирний</b>, <i>курсив</i>, <code>код</code>\n\n' +
+        `Поточний формат:\n<code>${currentTemplate}</code>\n\n` +
+        'Приклади:\n' +
+        '• {s} - {f} ({h} год)\n' +
+        '• <b>{s}-{f}</b>\n' +
+        '• <i>{s} - {f}</i> ({h}г)\n\n' +
+        'Введіть новий формат або /cancel для скасування:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle format_power_off - edit power off text template
+    if (data === 'format_power_off') {
+      conversationStates.set(telegramId, {
+        state: 'waiting_for_power_off_text',
+        previousMessageId: query.message.message_id
+      });
+      
+      const currentTemplate = user.power_off_text || '📴 Світло зникло о {time}';
+      
+      await bot.editMessageText(
+        '📴 <b>Текст при відключенні світла</b>\n\n' +
+        'Доступні змінні:\n' +
+        '• {time} - час події (14:35)\n' +
+        '• {date} - дата (01.02.2026)\n' +
+        '• {duration} - тривалість (якщо відомо)\n\n' +
+        `Поточний текст:\n<code>${currentTemplate}</code>\n\n` +
+        'Введіть новий текст або /cancel для скасування:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle format_power_on - edit power on text template
+    if (data === 'format_power_on') {
+      conversationStates.set(telegramId, {
+        state: 'waiting_for_power_on_text',
+        previousMessageId: query.message.message_id
+      });
+      
+      const currentTemplate = user.power_on_text || '💡 Світло з\'явилось о {time}';
+      
+      await bot.editMessageText(
+        '💡 <b>Текст при появі світла</b>\n\n' +
+        'Доступні змінні:\n' +
+        '• {time} - час події (14:35)\n' +
+        '• {date} - дата (01.02.2026)\n' +
+        '• {duration} - скільки не було світла\n\n' +
+        `Поточний текст:\n<code>${currentTemplate}</code>\n\n` +
+        'Введіть новий текст або /cancel для скасування:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle channel_test - show test publication menu
+    if (data === 'channel_test') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      const { getTestPublicationKeyboard } = require('../keyboards/inline');
+      await bot.editMessageText(
+        '🧪 <b>Тест публікації</b>\n\n' +
+        'Що опублікувати в канал?',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getTestPublicationKeyboard().reply_markup
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle test_schedule - test schedule publication
+    if (data === 'test_schedule') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      try {
+        const { publishScheduleWithPhoto } = require('../publisher');
+        await publishScheduleWithPhoto(bot, user, user.region, user.queue);
+        
+        await bot.answerCallbackQuery(query.id, {
+          text: '✅ Графік опубліковано в канал!',
+          show_alert: true
+        });
+      } catch (error) {
+        console.error('Error publishing test schedule:', error);
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Помилка публікації графіка',
+          show_alert: true
+        });
+      }
+      return;
+    }
+    
+    // Handle test_power_on - test power on publication
+    if (data === 'test_power_on') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      try {
+        const { formatTemplate } = require('../formatter');
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+        
+        const template = user.power_on_text || '💡 Світло з\'явилось о {time}';
+        const text = formatTemplate(template, {
+          time: timeStr,
+          date: dateStr,
+          duration: '2 год 15 хв'
+        });
+        
+        await bot.sendMessage(user.channel_id, text, { parse_mode: 'HTML' });
+        
+        await bot.answerCallbackQuery(query.id, {
+          text: '✅ Тестове повідомлення опубліковано!',
+          show_alert: true
+        });
+      } catch (error) {
+        console.error('Error publishing test power on:', error);
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Помилка публікації',
+          show_alert: true
+        });
+      }
+      return;
+    }
+    
+    // Handle test_power_off - test power off publication
+    if (data === 'test_power_off') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      try {
+        const { formatTemplate } = require('../formatter');
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+        
+        const template = user.power_off_text || '📴 Світло зникло о {time}';
+        const text = formatTemplate(template, {
+          time: timeStr,
+          date: dateStr,
+          duration: ''
+        });
+        
+        await bot.sendMessage(user.channel_id, text, { parse_mode: 'HTML' });
+        
+        await bot.answerCallbackQuery(query.id, {
+          text: '✅ Тестове повідомлення опубліковано!',
+          show_alert: true
+        });
+      } catch (error) {
+        console.error('Error publishing test power off:', error);
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Помилка публікації',
+          show_alert: true
+        });
+      }
+      return;
+    }
+    
+    // Handle test_custom - ask for custom message
+    if (data === 'test_custom') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      conversationStates.set(telegramId, {
+        state: 'waiting_for_custom_test',
+        previousMessageId: query.message.message_id
+      });
+      
+      await bot.editMessageText(
+        '✏️ <b>Своє повідомлення</b>\n\n' +
+        'Введіть текст, який буде опубліковано в канал.\n' +
+        'Можна використовувати HTML форматування.\n\n' +
+        'Або введіть /cancel для скасування:',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
     }
     
   } catch (error) {
