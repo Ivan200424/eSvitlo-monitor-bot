@@ -1,6 +1,6 @@
 const usersDb = require('../database/users');
-const { formatWelcomeMessage } = require('../formatter');
-const { getRegionKeyboard, getMainMenu, getQueueKeyboard, getConfirmKeyboard } = require('../keyboards/inline');
+const { formatWelcomeMessage, formatErrorMessage } = require('../formatter');
+const { getRegionKeyboard, getMainMenu, getQueueKeyboard, getConfirmKeyboard, getErrorKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
 
 // Стан wizard для кожного користувача
@@ -75,8 +75,10 @@ async function handleStart(bot, msg) {
       }
       
       // Build main menu message
-      let message = '🚧 Бот у розробці\n';
-      message += 'Деякі функції можуть працювати нестабільно\n\n';
+      let message = '<b>🚧 Бот у розробці</b>\n';
+      message += '<i>Деякі функції можуть працювати нестабільно</i>\n\n';
+      message += '<i>Допоможіть нам стати краще!</i>\n';
+      message += '<i>Натисніть ❓ Допомога → 💬 Обговорення/Підтримка</i>\n\n';
       message += '🏠 <b>Головне меню</b>\n\n';
       message += `📍 Регіон: ${region} • ${user.queue}\n`;
       message += `📺 Канал: ${user.channel_id ? user.channel_id + ' ✅' : 'не підключено'}\n`;
@@ -97,7 +99,10 @@ async function handleStart(bot, msg) {
     }
   } catch (error) {
     console.error('Помилка в handleStart:', error);
-    await bot.sendMessage(chatId, '😅 Щось пішло не так. Спробуй ще раз!');
+    await bot.sendMessage(chatId, formatErrorMessage(), {
+      parse_mode: 'HTML',
+      ...getErrorKeyboard()
+    });
   }
 }
 

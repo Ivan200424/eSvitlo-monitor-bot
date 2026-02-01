@@ -22,8 +22,9 @@ const {
   handleChannelCallback, 
   handleCancelChannel 
 } = require('./handlers/channel');
-const { getMainMenu, getHelpKeyboard, getStatisticsKeyboard, getSettingsKeyboard } = require('./keyboards/inline');
+const { getMainMenu, getHelpKeyboard, getStatisticsKeyboard, getSettingsKeyboard, getErrorKeyboard } = require('./keyboards/inline');
 const { REGIONS } = require('./constants/regions');
+const { formatErrorMessage } = require('./formatter');
 
 // Store pending channel connections
 const pendingChannels = new Map();
@@ -183,10 +184,16 @@ bot.on('callback_query', async (query) => {
         }
       } catch (error) {
         console.error('Помилка отримання графіка:', error);
-        await bot.answerCallbackQuery(query.id, {
-          text: '😅 Щось пішло не так. Спробуй ще раз!',
-          show_alert: true
-        });
+        
+        await bot.editMessageText(
+          formatErrorMessage(),
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            parse_mode: 'HTML',
+            reply_markup: getErrorKeyboard().reply_markup
+          }
+        );
       }
       await bot.answerCallbackQuery(query.id);
       return;

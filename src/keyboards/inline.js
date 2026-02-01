@@ -267,8 +267,10 @@ function getDeleteDataConfirmKeyboard() {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '← Скасувати', callback_data: 'back_to_settings' }],
-        [{ text: '→ Продовжити', callback_data: 'delete_data_step2' }],
+        [
+          { text: '← Скасувати', callback_data: 'back_to_settings' },
+          { text: '→ Продовжити', callback_data: 'delete_data_step2' }
+        ],
       ],
     },
   };
@@ -279,8 +281,10 @@ function getDeleteDataFinalKeyboard() {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '← Ні', callback_data: 'back_to_settings' }],
-        [{ text: '🗑 Так, видалити', callback_data: 'confirm_delete_data' }],
+        [
+          { text: '← Ні', callback_data: 'back_to_settings' },
+          { text: '🗑 Так, видалити', callback_data: 'confirm_delete_data' }
+        ],
       ],
     },
   };
@@ -490,7 +494,7 @@ function getErrorKeyboard() {
     reply_markup: {
       inline_keyboard: [
         [{ text: '🔄 Спробувати ще', callback_data: 'back_to_main' }],
-        [{ text: '💬 Підтримка', url: 'https://t.me/svitlocheckchat' }],
+        [{ text: '💬 Написати в чат', url: 'https://t.me/svitlocheckchat' }],
       ],
     },
   };
