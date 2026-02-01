@@ -24,7 +24,7 @@ function getMainMenu(botStatus = 'active', channelPaused = false) {
       ]);
     } else {
       buttons.push([
-        { text: '🛑 Зупинити роботу каналу', callback_data: 'channel_pause' }
+        { text: '🛑 Тимчасово зупинити канал', callback_data: 'channel_pause' }
       ]);
     }
   }
