@@ -182,12 +182,10 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
           duration: durationText || ''
         });
       } else {
-        // Default message
-        message = `🔴 Світла немає\n\n`;
-        message += `🕐 Час: ${timeStr}`;
-        if (durationText) {
-          message += `\n⏱ Було: ${durationText}`;
-        }
+        // Default message - NEW FORMAT
+        message = `🔴 ${timeStr} Світло зникло\n`;
+        message += `🕓 Воно було ${durationText || '—'}`;
+        message += scheduleText; // Додаємо інфо про наступне включення
       }
       
       // Якщо є попередній стан 'on', зберігаємо запис про відключення
@@ -203,12 +201,10 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
           duration: durationText || ''
         });
       } else {
-        // Default message
-        message = `🟢 Світло є\n\n`;
-        message += `🕐 Час: ${timeStr}`;
-        if (durationText) {
-          message += `\n⏱ Не було: ${durationText}`;
-        }
+        // Default message - NEW FORMAT
+        message = `🟢 ${timeStr} Світло з'явилося\n`;
+        message += `🕓 Його не було ${durationText || '—'}`;
+        message += scheduleText; // Додаємо інфо про наступне відключення
       }
     }
     
@@ -255,16 +251,26 @@ async function checkUserPower(user) {
     const newState = isAvailable ? 'on' : 'off';
     const userState = getUserState(user.id);
     
-    // Перша перевірка
+    // Перша перевірка - читаємо останній стан з БД
     if (userState.isFirstCheck) {
-      userState.currentState = newState;
-      userState.lastStableState = newState;
-      userState.lastStableAt = new Date().toISOString();
-      userState.isFirstCheck = false;
-      userState.consecutiveChecks = 0;
-      
-      // Оновлюємо БД
-      usersDb.updateUserPowerState(user.telegram_id, newState, userState.lastStableAt);
+      // Читаємо з БД останній збережений стан
+      if (user.power_state && user.power_changed_at) {
+        userState.currentState = user.power_state;
+        userState.lastStableState = user.power_state;
+        userState.lastStableAt = user.power_changed_at;
+        userState.isFirstCheck = false;
+        console.log(`User ${user.id}: Відновлено стан з БД: ${user.power_state} з ${user.power_changed_at}`);
+      } else {
+        // Немає збереженого стану - встановлюємо поточний
+        userState.currentState = newState;
+        userState.lastStableState = newState;
+        userState.lastStableAt = new Date().toISOString();
+        userState.isFirstCheck = false;
+        userState.consecutiveChecks = 0;
+        
+        // Оновлюємо БД
+        usersDb.updateUserPowerState(user.telegram_id, newState, userState.lastStableAt);
+      }
       return;
     }
     

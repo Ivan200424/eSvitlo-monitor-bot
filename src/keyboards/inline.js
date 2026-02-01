@@ -194,6 +194,14 @@ function getAdminKeyboard() {
           { text: '💻 Система', callback_data: 'admin_system' }
         ],
         [
+          { text: '⏱ Інтервали', callback_data: 'admin_intervals' },
+          { text: '⏸ Debounce', callback_data: 'admin_debounce' }
+        ],
+        [
+          { text: '⏸️ Режим паузи', callback_data: 'admin_pause' },
+          { text: '🗑 Очистити базу', callback_data: 'admin_clear_db' }
+        ],
+        [
           { text: '← Назад', callback_data: 'back_to_settings' }
         ],
       ],
@@ -507,6 +515,28 @@ function getErrorKeyboard() {
   };
 }
 
+// Меню налаштування debounce
+function getDebounceKeyboard(currentValue) {
+  const options = [1, 2, 3, 5, 10, 15];
+  const buttons = options.map(min => ({
+    text: currentValue === String(min) || currentValue === min ? `✓ ${min} хв` : `${min} хв`,
+    callback_data: `debounce_set_${min}`
+  }));
+  
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        buttons.slice(0, 3),
+        buttons.slice(3, 6),
+        [
+          { text: '← Назад', callback_data: 'admin_menu' },
+          { text: '⤴︎ Меню', callback_data: 'back_to_main' }
+        ]
+      ]
+    }
+  };
+}
+
 module.exports = {
   getMainMenu,
   getRegionKeyboard,
@@ -533,4 +563,5 @@ module.exports = {
   getPauseMenuKeyboard,
   getPauseMessageKeyboard,
   getErrorKeyboard,
+  getDebounceKeyboard,
 };

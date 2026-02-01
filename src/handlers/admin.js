@@ -628,6 +628,116 @@ async function handleAdminCallback(bot, query) {
       return;
     }
     
+    // Debounce handlers
+    if (data === 'admin_debounce') {
+      const currentDebounce = getSetting('power_debounce_minutes', '5');
+      const { getDebounceKeyboard } = require('../keyboards/inline');
+      
+      await bot.editMessageText(
+        `⏸ <b>Налаштування Debounce</b>\n\n` +
+        `Поточне значення: <b>${currentDebounce} хв</b>\n\n` +
+        `Debounce — мінімальний час стабільного стану світла перед публікацією.\n` +
+        `Це запобігає спаму при "моргаючому" світлі.\n\n` +
+        `Оберіть нове значення:`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getDebounceKeyboard(currentDebounce).reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    if (data.startsWith('debounce_set_')) {
+      const minutes = data.replace('debounce_set_', '');
+      setSetting('power_debounce_minutes', minutes);
+      const { getDebounceKeyboard } = require('../keyboards/inline');
+      
+      await bot.answerCallbackQuery(query.id, {
+        text: `✅ Debounce встановлено: ${minutes} хв`,
+        show_alert: true
+      });
+      
+      // Оновити повідомлення з оновленою клавіатурою
+      await bot.editMessageText(
+        `⏸ <b>Налаштування Debounce</b>\n\n` +
+        `Поточне значення: <b>${minutes} хв</b>\n\n` +
+        `Debounce — мінімальний час стабільного стану світла перед публікацією.\n` +
+        `Це запобігає спаму при "моргаючому" світлі.\n\n` +
+        `Оберіть нове значення:`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getDebounceKeyboard(minutes).reply_markup,
+        }
+      );
+      return;
+    }
+    
+    // Clear DB handlers
+    if (data === 'admin_clear_db') {
+      await bot.editMessageText(
+        `⚠️ <b>УВАГА: Очищення бази даних</b>\n\n` +
+        `Ця дія видалить ВСІХ користувачів з бази.\n` +
+        `Це потрібно при переході на новий бот.\n\n` +
+        `❗️ Дія незворотня!`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                { text: '← Скасувати', callback_data: 'admin_menu' },
+                { text: '🗑 Так, очистити', callback_data: 'admin_clear_db_confirm' }
+              ]
+            ]
+          }
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (data === 'admin_clear_db_confirm') {
+      // Очистити таблицю users з транзакцією для атомарності
+      const db = require('../database/db');
+      
+      try {
+        // Використовуємо транзакцію для забезпечення атомарності
+        const transaction = db.transaction(() => {
+          db.exec('DELETE FROM users');
+          db.exec('DELETE FROM power_history');
+          db.exec('DELETE FROM outage_history');
+        });
+        
+        transaction();
+        
+        await bot.editMessageText(
+          `✅ <b>База очищена</b>\n\n` +
+          `Всі користувачі видалені.\n` +
+          `Нові користувачі можуть починати з /start`,
+          {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'HTML',
+            reply_markup: getAdminKeyboard().reply_markup
+          }
+        );
+        await bot.answerCallbackQuery(query.id, { text: '✅ База очищена' });
+      } catch (error) {
+        console.error('Error clearing database:', error);
+        await bot.answerCallbackQuery(query.id, { 
+          text: '❌ Помилка очищення бази', 
+          show_alert: true 
+        });
+      }
+      return;
+    }
+    
   } catch (error) {
     console.error('Помилка в handleAdminCallback:', error);
     await bot.answerCallbackQuery(query.id, { text: '❌ Виникла помилка' });

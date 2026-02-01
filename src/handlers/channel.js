@@ -1057,14 +1057,15 @@ async function handleChannelCallback(bot, query) {
         previousMessageId: query.message.message_id
       });
       
-      const currentTemplate = user.power_off_text || '📴 Світло зникло о {time}';
+      const currentTemplate = user.power_off_text || '🔴 {time} Світло зникло\n🕓 Воно було {duration}\n🗓 Очікуємо за графіком о {schedule}';
       
       await bot.editMessageText(
         '📴 <b>Текст при відключенні світла</b>\n\n' +
         'Доступні змінні:\n' +
         '• {time} - час події (14:35)\n' +
         '• {date} - дата (01.02.2026)\n' +
-        '• {duration} - тривалість (якщо відомо)\n\n' +
+        '• {duration} - тривалість (якщо відомо)\n' +
+        '• {schedule} - інформація про графік\n\n' +
         `Поточний текст:\n<code>${currentTemplate}</code>\n\n` +
         'Введіть новий текст або /cancel для скасування:',
         {
@@ -1084,14 +1085,15 @@ async function handleChannelCallback(bot, query) {
         previousMessageId: query.message.message_id
       });
       
-      const currentTemplate = user.power_on_text || '💡 Світло з\'явилось о {time}';
+      const currentTemplate = user.power_on_text || '🟢 {time} Світло з\'явилося\n🕓 Його не було {duration}\n🗓 Наступне планове: {schedule}';
       
       await bot.editMessageText(
         '💡 <b>Текст при появі світла</b>\n\n' +
         'Доступні змінні:\n' +
         '• {time} - час події (14:35)\n' +
         '• {date} - дата (01.02.2026)\n' +
-        '• {duration} - скільки не було світла\n\n' +
+        '• {duration} - скільки не було світла\n' +
+        '• {schedule} - інформація про графік\n\n' +
         `Поточний текст:\n<code>${currentTemplate}</code>\n\n` +
         'Введіть новий текст або /cancel для скасування:',
         {
@@ -1171,11 +1173,12 @@ async function handleChannelCallback(bot, query) {
         const { formatTemplate, getCurrentDateTimeForTemplate } = require('../formatter');
         const { timeStr, dateStr } = getCurrentDateTimeForTemplate();
         
-        const template = user.power_on_text || '💡 Світло з\'явилось о {time}';
+        const template = user.power_on_text || '🟢 {time} Світло з\'явилося\n🕓 Його не було {duration}\n🗓 Наступне планове: {schedule}';
         const text = formatTemplate(template, {
           time: timeStr,
           date: dateStr,
-          duration: '2 год 15 хв'
+          duration: '2 год 15 хв',
+          schedule: '18:00 - 20:00'
         });
         
         await bot.sendMessage(user.channel_id, text, { parse_mode: 'HTML' });
@@ -1208,11 +1211,12 @@ async function handleChannelCallback(bot, query) {
         const { formatTemplate, getCurrentDateTimeForTemplate } = require('../formatter');
         const { timeStr, dateStr } = getCurrentDateTimeForTemplate();
         
-        const template = user.power_off_text || '📴 Світло зникло о {time}';
+        const template = user.power_off_text || '🔴 {time} Світло зникло\n🕓 Воно було {duration}\n🗓 Очікуємо за графіком о {schedule}';
         const text = formatTemplate(template, {
           time: timeStr,
           date: dateStr,
-          duration: ''
+          duration: '1 год 30 хв',
+          schedule: '16:00'
         });
         
         await bot.sendMessage(user.channel_id, text, { parse_mode: 'HTML' });
