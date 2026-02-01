@@ -110,6 +110,9 @@ function getSettingsKeyboard(isAdmin = false) {
       { text: '📡 IP', callback_data: 'settings_ip' },
       { text: '🔔 Сповіщення', callback_data: 'settings_alerts' }
     ],
+    [
+      { text: '🔔 Куди сповіщати', callback_data: 'settings_notify_target' }
+    ],
   ];
   
   // Separator line (appears as text, not a button)
@@ -552,6 +555,28 @@ function getDebounceKeyboard(currentValue) {
   };
 }
 
+// Меню вибору куди публікувати сповіщення про світло
+function getNotifyTargetKeyboard(currentTarget = 'both') {
+  const options = [
+    { value: 'bot', label: '📱 Тільки в бот' },
+    { value: 'channel', label: '📺 Тільки в канал' },
+    { value: 'both', label: '📱📺 В бот і канал' }
+  ];
+  
+  const buttons = options.map(opt => [{
+    text: currentTarget === opt.value ? `✓ ${opt.label}` : opt.label,
+    callback_data: `notify_target_${opt.value}`
+  }]);
+  
+  buttons.push([{ text: '← Назад', callback_data: 'back_to_settings' }]);
+  
+  return {
+    reply_markup: {
+      inline_keyboard: buttons
+    }
+  };
+}
+
 module.exports = {
   getMainMenu,
   getRegionKeyboard,
@@ -579,4 +604,5 @@ module.exports = {
   getPauseMessageKeyboard,
   getErrorKeyboard,
   getDebounceKeyboard,
+  getNotifyTargetKeyboard,
 };
