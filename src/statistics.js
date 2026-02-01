@@ -134,17 +134,45 @@ function formatStatsMessage(stats) {
 
 // Форматувати повідомлення статистики для popup (коротка версія до 200 символів)
 function formatStatsPopup(stats) {
+  let message = '📈 Статистика за 7 днів\n\n';
+  
   if (stats.count === 0) {
-    return '📊 Статистика за 7 днів:\n\n✅ Відключень не було';
+    message += '📊 Дані ще не зібрані\n';
+    message += 'ℹ️ Статистика з\'явиться після першого\n';
+    message += 'зафіксованого відключення.\n\n';
+    message += '💡 Підключіть IP-моніторинг для\n';
+    message += 'автоматичного збору даних.';
+    return message;
   }
   
-  const totalHours = (stats.totalMinutes / 60).toFixed(1);
-  const avgHours = (stats.avgMinutes / 60).toFixed(1);
+  const totalHours = Math.floor(stats.totalMinutes / 60);
+  const totalMins = stats.totalMinutes % 60;
+  const avgHours = Math.floor(stats.avgMinutes / 60);
+  const avgMins = stats.avgMinutes % 60;
   
-  let message = '📊 Статистика за 7 днів:\n\n';
   message += `⚡ Відключень: ${stats.count}\n`;
-  message += `⏱ Без світла: ${totalHours} год\n`;
-  message += `📈 Середнє: ${avgHours} год`;
+  
+  // Format total time
+  let totalStr = '';
+  if (totalHours > 0) {
+    totalStr = `${totalHours} год`;
+    if (totalMins > 0) totalStr += ` ${totalMins} хв`;
+  } else {
+    totalStr = `${totalMins} хв`;
+  }
+  message += `🕓 Загальний час без світла: ${totalStr}\n`;
+  
+  // Format average time
+  let avgStr = '';
+  if (avgHours > 0) {
+    avgStr = `${avgHours} год`;
+    if (avgMins > 0) avgStr += ` ${avgMins} хв`;
+  } else {
+    avgStr = `${avgMins} хв`;
+  }
+  message += `📉 Середня тривалість: ${avgStr}`;
+  
+  // TODO: Add longest and shortest outages if we have that data
   
   return message;
 }
