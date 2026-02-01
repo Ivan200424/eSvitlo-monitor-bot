@@ -8,7 +8,7 @@ const { initChannelGuard, checkExistingUsers } = require('./channelGuard');
 const { formatInterval } = require('./utils');
 const config = require('./config');
 
-console.log('🚀 Запуск eSvitlo Monitor Bot...');
+console.log('🚀 Запуск СвітлоЧек...');
 console.log(`📍 Timezone: ${config.timezone}`);
 console.log(`📊 Перевірка графіків: кожні ${formatInterval(config.checkIntervalSeconds)}`);
 console.log(`💾 База даних: ${config.databasePath}`);

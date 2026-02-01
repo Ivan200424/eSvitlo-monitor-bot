@@ -214,9 +214,9 @@ function formatHelpMessage() {
     const path = require('path');
     const packageJsonPath = path.join(__dirname, '..', 'package.json');
     const packageJson = require(packageJsonPath);
-    lines.push(`<i>GridBot v${packageJson.version}</i>`);
+    lines.push(`<i>СвітлоЧек v${packageJson.version}</i>`);
   } catch (e) {
-    lines.push('<i>GridBot</i>');
+    lines.push('<i>СвітлоЧек</i>');
   }
   
   return lines.join('\n');

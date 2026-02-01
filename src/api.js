@@ -15,7 +15,7 @@ async function fetchWithRetry(url, retries = 3, isImage = false) {
         timeout: 30000,
         responseType: isImage ? 'arraybuffer' : 'json',
         headers: {
-          'User-Agent': 'eSvitlo-Monitor-Bot/1.0',
+          'User-Agent': 'SvitloCheck-Bot/1.0',
         },
       });
       return response.data;
