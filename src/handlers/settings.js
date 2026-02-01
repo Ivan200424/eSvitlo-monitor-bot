@@ -7,6 +7,9 @@ const config = require('../config');
 // Store IP setup conversation states
 const ipSetupStates = new Map();
 
+// IP address validation regex
+const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
+
 // Обробник команди /settings
 async function handleSettings(bot, msg) {
   const chatId = msg.chat.id;
@@ -498,8 +501,7 @@ async function handleIpConversation(bot, msg) {
     }
     
     // Validate IP address format
-    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
-    if (!ipRegex.test(text)) {
+    if (!IP_REGEX.test(text)) {
       await bot.sendMessage(chatId, '❌ Невірний формат IP-адреси. Спробуйте ще раз.\n\nПриклад: 192.168.1.1');
       
       // Reset timeout
