@@ -208,16 +208,21 @@ async function handlePowerStateChange(user, newState, oldState, userState, origi
       }
     }
     
-    // Відправляємо повідомлення в особистий чат користувача
-    try {
-      await bot.sendMessage(user.telegram_id, message, { parse_mode: 'HTML' });
-      console.log(`📱 Повідомлення про зміну стану відправлено користувачу ${user.telegram_id}`);
-    } catch (error) {
-      console.error(`Помилка відправки повідомлення користувачу ${user.telegram_id}:`, error.message);
+    // Отримуємо налаштування куди публікувати
+    const notifyTarget = user.power_notify_target || 'both';
+    
+    // Відправляємо в особистий чат користувача
+    if (notifyTarget === 'bot' || notifyTarget === 'both') {
+      try {
+        await bot.sendMessage(user.telegram_id, message, { parse_mode: 'HTML' });
+        console.log(`📱 Повідомлення про зміну стану відправлено користувачу ${user.telegram_id}`);
+      } catch (error) {
+        console.error(`Помилка відправки повідомлення користувачу ${user.telegram_id}:`, error.message);
+      }
     }
     
     // Відправляємо в канал користувача, якщо він налаштований і відрізняється від особистого чату
-    if (user.channel_id && user.channel_id !== user.telegram_id) {
+    if (user.channel_id && user.channel_id !== user.telegram_id && (notifyTarget === 'channel' || notifyTarget === 'both')) {
       // Check if channel is paused
       if (user.channel_paused) {
         console.log(`Канал користувача ${user.telegram_id} зупинено, пропускаємо публікацію в канал`);

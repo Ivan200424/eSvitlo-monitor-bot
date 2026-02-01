@@ -422,6 +422,7 @@ bot.on('callback_query', async (query) => {
     if (data.startsWith('settings_') || 
         data.startsWith('alert_') ||
         data.startsWith('ip_') ||
+        data.startsWith('notify_target_') ||
         data === 'confirm_deactivate' ||
         data === 'confirm_delete_data' ||
         data === 'delete_data_step2' ||

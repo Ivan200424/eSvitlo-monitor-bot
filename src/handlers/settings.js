@@ -1,5 +1,5 @@
 const usersDb = require('../database/users');
-const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getDeleteDataConfirmKeyboard, getDeleteDataFinalKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard, getErrorKeyboard } = require('../keyboards/inline');
+const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getDeleteDataConfirmKeyboard, getDeleteDataFinalKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard, getErrorKeyboard, getNotifyTargetKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
 const { startWizard } = require('./start');
 const { isAdmin } = require('../utils');
@@ -617,6 +617,64 @@ async function handleSettingsCallback(bot, query) {
         }
       );
       await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Налаштування куди публікувати сповіщення про світло
+    if (data === 'settings_notify_target' || data === 'notify_target_menu') {
+      const currentTarget = user.power_notify_target || 'both';
+      
+      const targetLabels = {
+        'bot': '📱 Тільки в бот',
+        'channel': '📺 Тільки в канал',
+        'both': '📱📺 В бот і канал'
+      };
+      
+      await bot.editMessageText(
+        `🔔 <b>Сповіщення про світло</b>\n\n` +
+        `Куди публікувати повідомлення про увімкнення/вимкнення світла?\n\n` +
+        `Поточне: <b>${targetLabels[currentTarget]}</b>`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getNotifyTargetKeyboard(currentTarget).reply_markup
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Встановити налаштування куди публікувати
+    if (data.startsWith('notify_target_')) {
+      const target = data.replace('notify_target_', '');
+      if (['bot', 'channel', 'both'].includes(target)) {
+        usersDb.updateUserPowerNotifyTarget(telegramId, target);
+        
+        const targetLabels = {
+          'bot': '📱 Тільки в бот',
+          'channel': '📺 Тільки в канал',
+          'both': '📱📺 В бот і канал'
+        };
+        
+        await bot.answerCallbackQuery(query.id, {
+          text: `✅ Встановлено: ${targetLabels[target]}`,
+          show_alert: false
+        });
+        
+        // Оновити повідомлення з новою клавіатурою
+        await bot.editMessageText(
+          `🔔 <b>Сповіщення про світло</b>\n\n` +
+          `Куди публікувати повідомлення про увімкнення/вимкнення світла?\n\n` +
+          `Поточне: <b>${targetLabels[target]}</b>`,
+          {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'HTML',
+            reply_markup: getNotifyTargetKeyboard(target).reply_markup
+          }
+        );
+      }
       return;
     }
     

@@ -470,6 +470,17 @@ function updateUserChannelPaused(telegramId, paused) {
   return result.changes > 0;
 }
 
+// Оновити налаштування куди публікувати сповіщення про світло
+function updateUserPowerNotifyTarget(telegramId, target) {
+  // target: 'bot' | 'channel' | 'both'
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET power_notify_target = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE telegram_id = ?
+  `);
+  return stmt.run(target, telegramId).changes > 0;
+}
+
 module.exports = {
   createUser,
   getUserByTelegramId,
@@ -504,4 +515,5 @@ module.exports = {
   getUserFormatSettings,
   updateLastScheduleMessageId,
   updateUserChannelPaused,
+  updateUserPowerNotifyTarget,
 };
