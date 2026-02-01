@@ -357,6 +357,23 @@ async function applyChannelBranding(bot, chatId, telegramId, state) {
       userDescription: state.userDescription
     });
     
+    // Send first publication message to channel
+    try {
+      const user = usersDb.getUserByTelegramId(telegramId);
+      await bot.sendMessage(
+        state.channelId,
+        `👋 Канал підключено до СвітлоЧек!\n\n` +
+        `Тут будуть з'являтись:\n` +
+        `• 📊 Графіки відключень\n` +
+        `• ⚡ Сповіщення про світло\n\n` +
+        `Черга: ${user.queue}`,
+        { parse_mode: 'HTML' }
+      );
+    } catch (error) {
+      console.error('Error sending first publication:', error);
+      // Continue even if first publication fails
+    }
+    
     // Send success message with warning
     await bot.sendMessage(
       chatId,

@@ -168,7 +168,6 @@ bot.on('callback_query', async (query) => {
     // Channel callbacks
     if (data.startsWith('channel_') ||
         data.startsWith('brand_') ||
-        data.startsWith('confirm_') ||
         data.startsWith('changes_') ||
         data.startsWith('timer_')) {
       await handleChannelCallback(bot, query);
