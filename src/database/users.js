@@ -28,6 +28,12 @@ function getUserById(id) {
   return stmt.get(id);
 }
 
+// Отримати користувача по channel_id
+function getUserByChannelId(channelId) {
+  const stmt = db.prepare('SELECT * FROM users WHERE channel_id = ?');
+  return stmt.get(channelId);
+}
+
 // Оновити регіон та чергу користувача
 function updateUserRegionQueue(telegramId, region, queue) {
   const stmt = db.prepare(`
@@ -384,6 +390,7 @@ module.exports = {
   createUser,
   getUserByTelegramId,
   getUserById,
+  getUserByChannelId,
   updateUserRegionQueue,
   updateUserRegionAndQueue,
   updateUserChannel,
