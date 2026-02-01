@@ -234,6 +234,103 @@ async function handleConversation(bot, msg) {
       return true;
     }
     
+    if (state.state === 'editing_title') {
+      // Validate title
+      if (!text || text.trim().length === 0) {
+        await bot.sendMessage(chatId, '❌ Назва не може бути пустою. Спробуйте ще раз або використайте /cancel:');
+        return true;
+      }
+      
+      if (text.length > 100) {
+        await bot.sendMessage(chatId, '❌ Назва занадто довга (максимум 100 символів). Спробуйте ще раз:');
+        return true;
+      }
+      
+      const userTitle = text.trim();
+      const fullTitle = CHANNEL_NAME_PREFIX + userTitle;
+      
+      // Update channel title
+      try {
+        await bot.setChatTitle(state.channelId, fullTitle);
+        
+        // Update database
+        usersDb.updateChannelBranding(telegramId, {
+          channelTitle: fullTitle,
+          userTitle: userTitle
+        });
+        
+        await bot.sendMessage(
+          chatId,
+          `✅ <b>Назву каналу змінено!</b>\n\n` +
+          `Нова назва: ${fullTitle}\n\n` +
+          `⚠️ <b>Важливо:</b> Зміна через бота - дозволена.\n` +
+          `Не змінюйте назву вручну в Telegram!`,
+          { parse_mode: 'HTML' }
+        );
+        
+        conversationStates.delete(telegramId);
+        return true;
+      } catch (error) {
+        console.error('Error updating channel title:', error);
+        await bot.sendMessage(
+          chatId,
+          '❌ Не вдалося змінити назву каналу. Переконайтесь, що бот має права на редагування інформації каналу.'
+        );
+        conversationStates.delete(telegramId);
+        return true;
+      }
+    }
+    
+    if (state.state === 'editing_description') {
+      // Validate description
+      if (!text || text.trim().length === 0) {
+        await bot.sendMessage(chatId, '❌ Опис не може бути пустим. Спробуйте ще раз або використайте /cancel:');
+        return true;
+      }
+      
+      if (text.length > 200) {
+        await bot.sendMessage(chatId, '❌ Опис занадто довгий (максимум 200 символів). Спробуйте ще раз:');
+        return true;
+      }
+      
+      const userDescription = text.trim();
+      let fullDescription = CHANNEL_DESCRIPTION_BASE;
+      if (userDescription) {
+        fullDescription += '\n📍 ' + userDescription;
+      }
+      
+      // Update channel description
+      try {
+        await bot.setChatDescription(state.channelId, fullDescription);
+        
+        // Update database
+        usersDb.updateChannelBranding(telegramId, {
+          channelDescription: fullDescription,
+          userDescription: userDescription
+        });
+        
+        await bot.sendMessage(
+          chatId,
+          `✅ <b>Опис каналу змінено!</b>\n\n` +
+          `Новий опис: ${fullDescription}\n\n` +
+          `⚠️ <b>Важливо:</b> Зміна через бота - дозволена.\n` +
+          `Не змінюйте опис вручну в Telegram!`,
+          { parse_mode: 'HTML' }
+        );
+        
+        conversationStates.delete(telegramId);
+        return true;
+      } catch (error) {
+        console.error('Error updating channel description:', error);
+        await bot.sendMessage(
+          chatId,
+          '❌ Не вдалося змінити опис каналу. Переконайтесь, що бот має права на редагування інформації каналу.'
+        );
+        conversationStates.delete(telegramId);
+        return true;
+      }
+    }
+    
   } catch (error) {
     console.error('Помилка в handleConversation:', error);
     await bot.sendMessage(chatId, '❌ Виникла помилка. Спробуйте ще раз командою /setchannel');
@@ -243,27 +340,114 @@ async function handleConversation(bot, msg) {
   return false;
 }
 
-// Handle callback for description choice
+// Handle callback for channel operations
 async function handleChannelCallback(bot, query) {
   const chatId = query.message.chat.id;
   const telegramId = String(query.from.id);
   const data = query.data;
   
-  const state = conversationStates.get(telegramId);
-  if (!state) {
-    await bot.answerCallbackQuery(query.id, { text: '❌ Сесія закінчилась. Почніть заново.' });
-    return;
-  }
-  
   try {
-    if (data === 'channel_add_desc') {
-      state.state = 'waiting_for_description';
-      conversationStates.set(telegramId, state);
+    const user = usersDb.getUserByTelegramId(telegramId);
+    
+    // Handle channel_connect - redirect to /channel command info
+    if (data === 'channel_connect') {
+      await bot.editMessageText(
+        `📺 <b>Підключення до каналу</b>\n\n` +
+        `Щоб підключити бота до вашого каналу:\n\n` +
+        `1️⃣ Додайте бота як адміністратора вашого каналу\n` +
+        `2️⃣ Дайте боту права на:\n` +
+        `   • Публікацію повідомлень\n` +
+        `   • Редагування інформації каналу\n` +
+        `3️⃣ Використайте команду:\n` +
+        `   <code>/setchannel @your_channel</code>`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Handle channel_info - show channel information
+    if (data === 'channel_info') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      const statusText = user.channel_status === 'blocked' ? '🔴 Заблокований' : '🟢 Активний';
+      const infoText = 
+        `📺 <b>Інформація про канал</b>\n\n` +
+        `ID: <code>${user.channel_id}</code>\n` +
+        `Назва: ${user.channel_title || 'Не налаштовано'}\n` +
+        `Статус: ${statusText}\n\n` +
+        (user.channel_status === 'blocked' 
+          ? `⚠️ Канал заблокований через ручну зміну налаштувань.\nВикористайте "Перепідключити канал" для відновлення.`
+          : `✅ Канал активний і готовий до публікацій.`);
+      
+      await bot.answerCallbackQuery(query.id, {
+        text: infoText.replace(/<[^>]*>/g, ''), // Remove HTML tags for popup
+        show_alert: true
+      });
+      return;
+    }
+    
+    // Handle channel_disable - disable channel publications
+    if (data === 'channel_disable') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      // Remove channel from user
+      usersDb.updateUserChannel(telegramId, null);
       
       await bot.editMessageText(
-        '📝 <b>Введіть опис каналу:</b>\n\n' +
-        'Наприклад: ЖК "Сонячний", під\'їзд 2\n\n' +
-        'Або введіть /cancel для скасування',
+        `✅ <b>Публікації вимкнено</b>\n\n` +
+        `Канал відключено. Графіки більше не будуть публікуватись.\n\n` +
+        `Для повторного підключення використайте:\n` +
+        `<code>/setchannel @your_channel</code>`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      await bot.answerCallbackQuery(query.id, { text: '✅ Канал відключено' });
+      return;
+    }
+    
+    // Handle channel_edit_title - edit channel title
+    if (data === 'channel_edit_title') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
+      
+      conversationStates.set(telegramId, {
+        state: 'editing_title',
+        channelId: user.channel_id
+      });
+      
+      await bot.editMessageText(
+        `📝 <b>Зміна назви каналу</b>\n\n` +
+        `Поточна назва: ${user.channel_title || 'Не налаштовано'}\n\n` +
+        `Введіть нову назву для каналу.\n` +
+        `Вона буде додана після префіксу "${CHANNEL_NAME_PREFIX}"\n\n` +
+        `<b>Приклад:</b> Київ Черга 3.1\n` +
+        `<b>Результат:</b> ${CHANNEL_NAME_PREFIX}Київ Черга 3.1\n\n` +
+        `Або введіть /cancel для скасування`,
         {
           chat_id: chatId,
           message_id: query.message.message_id,
@@ -275,14 +459,76 @@ async function handleChannelCallback(bot, query) {
       return;
     }
     
-    if (data === 'channel_skip_desc') {
-      state.userDescription = null;
-      await applyChannelBranding(bot, chatId, telegramId, state);
-      conversationStates.delete(telegramId);
+    // Handle channel_edit_description - edit channel description
+    if (data === 'channel_edit_description') {
+      if (!user || !user.channel_id) {
+        await bot.answerCallbackQuery(query.id, {
+          text: '❌ Канал не підключено',
+          show_alert: true
+        });
+        return;
+      }
       
-      await bot.deleteMessage(chatId, query.message.message_id);
+      conversationStates.set(telegramId, {
+        state: 'editing_description',
+        channelId: user.channel_id
+      });
+      
+      await bot.editMessageText(
+        `📝 <b>Зміна опису каналу</b>\n\n` +
+        `Поточний опис: ${user.user_description || 'Не налаштовано'}\n\n` +
+        `Введіть новий опис для каналу.\n\n` +
+        `<b>Приклад:</b> ЖК "Сонячний", під'їзд 2\n\n` +
+        `Або введіть /cancel для скасування`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML'
+        }
+      );
+      
       await bot.answerCallbackQuery(query.id);
       return;
+    }
+    
+    // Handle existing conversation state callbacks
+    const state = conversationStates.get(telegramId);
+    if (!state) {
+      // No conversation state - these callbacks need a state
+      if (data === 'channel_add_desc' || data === 'channel_skip_desc') {
+        await bot.answerCallbackQuery(query.id, { text: '❌ Сесія закінчилась. Почніть заново.' });
+        return;
+      }
+    } else {
+      // Has conversation state - handle description choice callbacks
+      if (data === 'channel_add_desc') {
+        state.state = 'waiting_for_description';
+        conversationStates.set(telegramId, state);
+        
+        await bot.editMessageText(
+          '📝 <b>Введіть опис каналу:</b>\n\n' +
+          'Наприклад: ЖК "Сонячний", під\'їзд 2\n\n' +
+          'Або введіть /cancel для скасування',
+          {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'HTML'
+          }
+        );
+        
+        await bot.answerCallbackQuery(query.id);
+        return;
+      }
+      
+      if (data === 'channel_skip_desc') {
+        state.userDescription = null;
+        await applyChannelBranding(bot, chatId, telegramId, state);
+        conversationStates.delete(telegramId);
+        
+        await bot.deleteMessage(chatId, query.message.message_id);
+        await bot.answerCallbackQuery(query.id);
+        return;
+      }
     }
     
   } catch (error) {

@@ -125,17 +125,30 @@ function getAlertsSettingsKeyboard() {
   };
 }
 
-// Вибір часу для алертів (5, 10, 15, 30, 60 хвилин)
+// Вибір часу для алертів (5, 10, 15, 30, 60 хвилин + вимкнути)
 function getAlertTimeKeyboard(type) {
   const times = [5, 10, 15, 30, 60];
   const buttons = [];
   
-  times.forEach(time => {
-    buttons.push([{
+  // Add time options in rows of 3
+  const row = [];
+  times.forEach((time, index) => {
+    row.push({
       text: `${time} хв`,
       callback_data: `alert_time_${type}_${time}`,
-    }]);
+    });
+    
+    if (row.length === 3 || index === times.length - 1) {
+      buttons.push([...row]);
+      row.length = 0;
+    }
   });
+  
+  // Add disable option
+  buttons.push([{
+    text: '❌ Вимкнути',
+    callback_data: `alert_time_${type}_0`,
+  }]);
   
   buttons.push([{ text: '« Назад', callback_data: 'settings_alerts' }]);
   
@@ -238,22 +251,29 @@ function getHelpKeyboard() {
 }
 
 // Канал меню
-function getChannelMenuKeyboard(channelUsername = null, isPublic = false, channelStatus = 'active') {
-  const buttons = [
-    [{ text: 'ℹ️ Інфо про канал', callback_data: 'channel_info' }],
-    [{ text: '✏️ Змінити канал', callback_data: 'channel_change' }],
-  ];
+function getChannelMenuKeyboard(channelId = null, isPublic = false, channelStatus = 'active') {
+  const buttons = [];
   
-  // Add reconnect button if channel is blocked
-  if (channelStatus === 'blocked') {
-    buttons.push([{ text: '⚙️ Перепідключити канал', callback_data: 'channel_reconnect' }]);
+  if (!channelId) {
+    // Канал НЕ підключено
+    buttons.push([{ text: '➕ Підключити канал', callback_data: 'channel_connect' }]);
   } else {
-    buttons.push([{ text: '🔕 Вимкнути публікацію', callback_data: 'channel_disable' }]);
-  }
-  
-  // Add "Open channel" button for public channels
-  if (isPublic && channelUsername) {
-    buttons.unshift([{ text: '📺 Відкрити канал', url: `https://t.me/${channelUsername.replace('@', '')}` }]);
+    // Канал підключено
+    // Add "Open channel" button for public channels
+    if (isPublic && channelId.startsWith('@')) {
+      buttons.push([{ text: '📺 Відкрити канал', url: `https://t.me/${channelId.replace('@', '')}` }]);
+    }
+    
+    buttons.push([{ text: 'ℹ️ Інфо про канал', callback_data: 'channel_info' }]);
+    buttons.push([{ text: '✏️ Змінити назву', callback_data: 'channel_edit_title' }]);
+    buttons.push([{ text: '📝 Змінити опис', callback_data: 'channel_edit_description' }]);
+    
+    // Add reconnect button if channel is blocked
+    if (channelStatus === 'blocked') {
+      buttons.push([{ text: '⚙️ Перепідключити канал', callback_data: 'channel_reconnect' }]);
+    } else {
+      buttons.push([{ text: '🔴 Вимкнути публікації', callback_data: 'channel_disable' }]);
+    }
   }
   
   buttons.push([{ text: '🔙 Назад', callback_data: 'back_to_settings' }]);

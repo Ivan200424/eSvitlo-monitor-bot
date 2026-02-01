@@ -79,12 +79,19 @@ async function handleSettingsCallback(bot, query) {
     
     // Налаштування алертів
     if (data === 'settings_alerts') {
+      const offTime = user.notify_before_off === 0 ? 'Вимкнено' : `${user.notify_before_off} хв`;
+      const onTime = user.notify_before_on === 0 ? 'Вимкнено' : `${user.notify_before_on} хв`;
+      const offStatus = user.alerts_off_enabled && user.notify_before_off > 0 ? '✅' : '❌';
+      const onStatus = user.alerts_on_enabled && user.notify_before_on > 0 ? '✅' : '❌';
+      
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Перед відключенням: ${user.notify_before_off} хв\n` +
-        `⏰ Перед включенням: ${user.notify_before_on} хв\n` +
-        `🔴 Відключення: ${user.alerts_off_enabled ? '✅' : '❌'}\n` +
-        `🟢 Включення: ${user.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового відключення)\n` +
+        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
+        `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового включення)\n` +
+        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
         `Обери опцію:`;
       
       await bot.editMessageText(message, {
@@ -100,10 +107,12 @@ async function handleSettingsCallback(bot, query) {
     // Час сповіщення перед відключенням
     if (data === 'alert_off_time') {
       await bot.editMessageText(
-        '⏰ Оберіть час сповіщення перед відключенням:',
+        '⏰ <b>Оберіть час сповіщення перед відключенням:</b>\n\n' +
+        'Бот попередить вас за обраний час до планового відключення світла.',
         {
           chat_id: chatId,
           message_id: query.message.message_id,
+          parse_mode: 'HTML',
           reply_markup: getAlertTimeKeyboard('off').reply_markup,
         }
       );
@@ -114,10 +123,12 @@ async function handleSettingsCallback(bot, query) {
     // Час сповіщення перед включенням
     if (data === 'alert_on_time') {
       await bot.editMessageText(
-        '⏰ Оберіть час сповіщення перед включенням:',
+        '⏰ <b>Оберіть час сповіщення перед включенням:</b>\n\n' +
+        'Бот попередить вас за обраний час до планового включення світла.',
         {
           chat_id: chatId,
           message_id: query.message.message_id,
+          parse_mode: 'HTML',
           reply_markup: getAlertTimeKeyboard('on').reply_markup,
         }
       );
@@ -136,12 +147,19 @@ async function handleSettingsCallback(bot, query) {
       
       // Оновлюємо повідомлення
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
+      const offTime = updatedUser.notify_before_off === 0 ? 'Вимкнено' : `${updatedUser.notify_before_off} хв`;
+      const onTime = updatedUser.notify_before_on === 0 ? 'Вимкнено' : `${updatedUser.notify_before_on} хв`;
+      const offStatus = updatedUser.alerts_off_enabled && updatedUser.notify_before_off > 0 ? '✅' : '❌';
+      const onStatus = updatedUser.alerts_on_enabled && updatedUser.notify_before_on > 0 ? '✅' : '❌';
+      
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Перед відключенням: ${updatedUser.notify_before_off} хв\n` +
-        `⏰ Перед включенням: ${updatedUser.notify_before_on} хв\n` +
-        `🔴 Відключення: ${updatedUser.alerts_off_enabled ? '✅' : '❌'}\n` +
-        `🟢 Включення: ${updatedUser.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового відключення)\n` +
+        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
+        `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового включення)\n` +
+        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
         `Обери опцію:`;
       
       await bot.editMessageText(message, {
@@ -164,12 +182,19 @@ async function handleSettingsCallback(bot, query) {
       
       // Оновлюємо повідомлення
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
+      const offTime = updatedUser.notify_before_off === 0 ? 'Вимкнено' : `${updatedUser.notify_before_off} хв`;
+      const onTime = updatedUser.notify_before_on === 0 ? 'Вимкнено' : `${updatedUser.notify_before_on} хв`;
+      const offStatus = updatedUser.alerts_off_enabled && updatedUser.notify_before_off > 0 ? '✅' : '❌';
+      const onStatus = updatedUser.alerts_on_enabled && updatedUser.notify_before_on > 0 ? '✅' : '❌';
+      
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Перед відключенням: ${updatedUser.notify_before_off} хв\n` +
-        `⏰ Перед включенням: ${updatedUser.notify_before_on} хв\n` +
-        `🔴 Відключення: ${updatedUser.alerts_off_enabled ? '✅' : '❌'}\n` +
-        `🟢 Включення: ${updatedUser.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового відключення)\n` +
+        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
+        `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового включення)\n` +
+        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
         `Обери опцію:`;
       
       await bot.editMessageText(message, {
@@ -188,22 +213,40 @@ async function handleSettingsCallback(bot, query) {
       
       if (type === 'off') {
         usersDb.updateUserAlertSettings(telegramId, { notifyBeforeOff: minutes });
+        if (minutes === 0) {
+          usersDb.updateUserAlertSettings(telegramId, { alertsOffEnabled: false });
+        } else {
+          usersDb.updateUserAlertSettings(telegramId, { alertsOffEnabled: true });
+        }
       } else {
         usersDb.updateUserAlertSettings(telegramId, { notifyBeforeOn: minutes });
+        if (minutes === 0) {
+          usersDb.updateUserAlertSettings(telegramId, { alertsOnEnabled: false });
+        } else {
+          usersDb.updateUserAlertSettings(telegramId, { alertsOnEnabled: true });
+        }
       }
       
+      const displayText = minutes === 0 ? 'Вимкнено' : `${minutes} хв`;
       await bot.answerCallbackQuery(query.id, {
-        text: `✅ Час сповіщення встановлено: ${minutes} хв`,
+        text: `✅ Час сповіщення встановлено: ${displayText}`,
       });
       
       // Повертаємось до меню алертів
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
+      const offTime = updatedUser.notify_before_off === 0 ? 'Вимкнено' : `${updatedUser.notify_before_off} хв`;
+      const onTime = updatedUser.notify_before_on === 0 ? 'Вимкнено' : `${updatedUser.notify_before_on} хв`;
+      const offStatus = updatedUser.alerts_off_enabled && updatedUser.notify_before_off > 0 ? '✅' : '❌';
+      const onStatus = updatedUser.alerts_on_enabled && updatedUser.notify_before_on > 0 ? '✅' : '❌';
+      
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Перед відключенням: ${updatedUser.notify_before_off} хв\n` +
-        `⏰ Перед включенням: ${updatedUser.notify_before_on} хв\n` +
-        `🔴 Відключення: ${updatedUser.alerts_off_enabled ? '✅' : '❌'}\n` +
-        `🟢 Включення: ${updatedUser.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового відключення)\n` +
+        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
+        `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
+        `(попередить за X хвилин до планового включення)\n` +
+        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
         `Обери опцію:`;
       
       await bot.editMessageText(message, {
