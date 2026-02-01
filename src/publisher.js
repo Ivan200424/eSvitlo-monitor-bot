@@ -13,6 +13,12 @@ const SHORT_DAY_NAMES = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб']
 // Публікувати графік з фото та кнопками
 async function publishScheduleWithPhoto(bot, user, region, queue) {
   try {
+    // Check if channel is paused
+    if (user.channel_paused) {
+      console.log(`Канал користувача ${user.telegram_id} зупинено, пропускаємо публікацію графіка`);
+      return;
+    }
+    
     // Delete previous schedule message if delete_old_message is enabled
     if (user.delete_old_message && user.last_schedule_message_id) {
       try {

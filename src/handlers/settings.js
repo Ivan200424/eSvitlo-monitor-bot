@@ -85,7 +85,7 @@ async function handleSettingsCallback(bot, query) {
     if (data === 'settings_alerts') {
       const message = 
         `🔔 <b>Сповіщення</b>\n\n` +
-        `Статус: ${user.is_active ? '✅ Увімкнено' : '❌ Вимкнено'}\n\n` +
+        `Статус: <b>${user.is_active ? '✅ Увімкнено' : '❌ Вимкнено'}</b>\n\n` +
         (user.is_active ? 
           'Ви отримуєте:\n' +
           '• Зміни графіка\n' +
@@ -118,7 +118,7 @@ async function handleSettingsCallback(bot, query) {
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
       const message = 
         `🔔 <b>Сповіщення</b>\n\n` +
-        `Статус: ${updatedUser.is_active ? '✅ Увімкнено' : '❌ Вимкнено'}\n\n` +
+        `Статус: <b>${updatedUser.is_active ? '✅ Увімкнено' : '❌ Вимкнено'}</b>\n\n` +
         (updatedUser.is_active ? 
           'Ви отримуєте:\n' +
           '• Зміни графіка\n' +
@@ -196,10 +196,10 @@ async function handleSettingsCallback(bot, query) {
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
         `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
         `(попередить за X хвилин до планового відключення)\n` +
-        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
+        `⏰ Зараз: <b>${offTime}</b> | Статус: ${offStatus}\n\n` +
         `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
         `(попередить за X хвилин до планового включення)\n` +
-        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
+        `⏰ Зараз: <b>${onTime}</b> | Статус: ${onStatus}\n\n` +
         `Обери опцію:`;
       
       await bot.editMessageText(message, {
@@ -231,10 +231,10 @@ async function handleSettingsCallback(bot, query) {
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
         `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
         `(попередить за X хвилин до планового відключення)\n` +
-        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
+        `⏰ Зараз: <b>${offTime}</b> | Статус: ${offStatus}\n\n` +
         `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
         `(попередить за X хвилин до планового включення)\n` +
-        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
+        `⏰ Зараз: <b>${onTime}</b> | Статус: ${onStatus}\n\n` +
         `Обери опцію:`;
       
       await bot.editMessageText(message, {
@@ -283,10 +283,10 @@ async function handleSettingsCallback(bot, query) {
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
         `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
         `(попередить за X хвилин до планового відключення)\n` +
-        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
+        `⏰ Зараз: <b>${offTime}</b> | Статус: ${offStatus}\n\n` +
         `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
         `(попередить за X хвилин до планового включення)\n` +
-        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
+        `⏰ Зараз: <b>${onTime}</b> | Статус: ${onStatus}\n\n` +
         `Обери опцію:`;
       
       await bot.editMessageText(message, {
@@ -387,7 +387,7 @@ async function handleSettingsCallback(bot, query) {
         '🏠 <b>Головне меню</b>',
         {
           parse_mode: 'HTML',
-          ...getMainMenu('paused'),
+          ...getMainMenu('paused', false),
         }
       );
       return;
@@ -633,7 +633,6 @@ async function handleSettingsCallback(bot, query) {
       message += `📺 Канал: ${updatedUser.channel_id ? updatedUser.channel_id + ' ✅' : 'не підключено'}\n`;
       message += `📡 IP: ${updatedUser.router_ip ? updatedUser.router_ip + ' ✅' : 'не підключено'}\n`;
       message += `🔔 Сповіщення: ${updatedUser.is_active ? 'увімкнено ✅' : 'вимкнено'}\n\n`;
-      message += '⸻\n\n';
       message += 'Керування:\n';
       
       await bot.editMessageText(message, {
@@ -747,13 +746,15 @@ async function handleIpConversation(bot, msg) {
       botStatus = 'paused';
     }
     
+    const channelPaused = user.channel_paused === 1;
+    
     const { getMainMenu } = require('../keyboards/inline');
     await bot.sendMessage(
       chatId,
       '🏠 <b>Головне меню</b>',
       {
         parse_mode: 'HTML',
-        ...getMainMenu(botStatus),
+        ...getMainMenu(botStatus, channelPaused),
       }
     );
     

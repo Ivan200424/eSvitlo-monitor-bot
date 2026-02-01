@@ -142,7 +142,8 @@ function runMigrations() {
     { name: 'power_on_text', type: 'TEXT DEFAULT NULL' },
     { name: 'delete_old_message', type: 'INTEGER DEFAULT 0' },
     { name: 'picture_only', type: 'INTEGER DEFAULT 0' },
-    { name: 'last_schedule_message_id', type: 'INTEGER DEFAULT NULL' }
+    { name: 'last_schedule_message_id', type: 'INTEGER DEFAULT NULL' },
+    { name: 'channel_paused', type: 'INTEGER DEFAULT 0' }
   ];
   
   let addedCount = 0;

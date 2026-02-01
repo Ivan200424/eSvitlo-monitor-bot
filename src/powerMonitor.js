@@ -183,7 +183,7 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
         });
       } else {
         // Default message - NEW FORMAT
-        message = `🔴 ${timeStr} Світло зникло\n`;
+        message = `🔴 <b>${timeStr} Світло зникло</b>\n`;
         message += `🕓 Воно було ${durationText || '—'}`;
         message += scheduleText; // Додаємо інфо про наступне включення
       }
@@ -202,7 +202,7 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
         });
       } else {
         // Default message - NEW FORMAT
-        message = `🟢 ${timeStr} Світло з'явилося\n`;
+        message = `🟢 <b>${timeStr} Світло з'явилося</b>\n`;
         message += `🕓 Його не було ${durationText || '—'}`;
         message += scheduleText; // Додаємо інфо про наступне відключення
       }
@@ -218,11 +218,16 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
     
     // Відправляємо в канал користувача, якщо він налаштований і відрізняється від особистого чату
     if (user.channel_id && user.channel_id !== user.telegram_id) {
-      try {
-        await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
-        console.log(`📢 Повідомлення про зміну стану відправлено в канал ${user.channel_id}`);
-      } catch (error) {
-        console.error(`Помилка відправки повідомлення в канал ${user.channel_id}:`, error.message);
+      // Check if channel is paused
+      if (user.channel_paused) {
+        console.log(`Канал користувача ${user.telegram_id} зупинено, пропускаємо публікацію в канал`);
+      } else {
+        try {
+          await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
+          console.log(`📢 Повідомлення про зміну стану відправлено в канал ${user.channel_id}`);
+        } catch (error) {
+          console.error(`Помилка відправки повідомлення в канал ${user.channel_id}:`, error.message);
+        }
       }
     }
     

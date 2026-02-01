@@ -1,22 +1,37 @@
 const { REGIONS, GROUPS, SUBGROUPS, QUEUES } = require('../constants/regions');
 
 // Головне меню після /start для існуючих користувачів
-function getMainMenu(botStatus = 'active') {
+function getMainMenu(botStatus = 'active', channelPaused = false) {
+  const buttons = [
+    [
+      { text: '📊 Графік', callback_data: 'menu_schedule' },
+      { text: '⏱ Таймер', callback_data: 'menu_timer' }
+    ],
+    [
+      { text: '📈 Статистика', callback_data: 'menu_stats' },
+      { text: '❓ Допомога', callback_data: 'menu_help' }
+    ],
+    [
+      { text: '⚙️ Налаштування', callback_data: 'menu_settings' }
+    ],
+  ];
+  
+  // Add pause/resume button if user has a channel
+  if (botStatus !== 'no_channel') {
+    if (channelPaused) {
+      buttons.push([
+        { text: '✅ Відновити роботу каналу', callback_data: 'channel_resume' }
+      ]);
+    } else {
+      buttons.push([
+        { text: '🛑 Зупинити роботу каналу', callback_data: 'channel_pause' }
+      ]);
+    }
+  }
+  
   return {
     reply_markup: {
-      inline_keyboard: [
-        [
-          { text: '📊 Графік', callback_data: 'menu_schedule' },
-          { text: '⏱ Таймер', callback_data: 'menu_timer' }
-        ],
-        [
-          { text: '📈 Статистика', callback_data: 'menu_stats' },
-          { text: '❓ Допомога', callback_data: 'menu_help' }
-        ],
-        [
-          { text: '⚙️ Налаштування', callback_data: 'menu_settings' }
-        ],
-      ],
+      inline_keyboard: buttons,
     },
   };
 }
