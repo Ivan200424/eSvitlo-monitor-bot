@@ -466,7 +466,7 @@ async function handleAdminCallback(bot, query) {
       
       await bot.editMessageText(
         '⏸️ <b>Режим паузи</b>\n\n' +
-        `Статус: ${statusIcon} ${statusText}\n\n` +
+        `Статус: <b>${statusIcon} ${statusText}</b>\n\n` +
         'При паузі:\n' +
         '• ❌ Блокується підключення нових каналів\n' +
         '• ✅ Все інше працює\n' +
@@ -503,7 +503,7 @@ async function handleAdminCallback(bot, query) {
       
       await bot.editMessageText(
         '⏸️ <b>Режим паузи</b>\n\n' +
-        `Статус: ${statusIcon} ${statusText}\n\n` +
+        `Статус: <b>${statusIcon} ${statusText}</b>\n\n` +
         'При паузі:\n' +
         '• ❌ Блокується підключення нових каналів\n' +
         '• ✅ Все інше працює\n' +
