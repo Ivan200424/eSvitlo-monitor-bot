@@ -42,7 +42,12 @@ async function handleSettings(bot, msg) {
     
   } catch (error) {
     console.error('Помилка в handleSettings:', error);
-    await bot.sendMessage(chatId, '😅 Щось пішло не так. Спробуй ще раз!');
+    const { formatErrorMessage } = require('../formatter');
+    const { getErrorKeyboard } = require('../keyboards/inline');
+    await bot.sendMessage(chatId, formatErrorMessage(), {
+      parse_mode: 'HTML',
+      ...getErrorKeyboard()
+    });
   }
 }
 

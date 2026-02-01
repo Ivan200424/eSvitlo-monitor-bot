@@ -183,10 +183,19 @@ bot.on('callback_query', async (query) => {
         }
       } catch (error) {
         console.error('Помилка отримання графіка:', error);
-        await bot.answerCallbackQuery(query.id, {
-          text: '😅 Щось пішло не так. Спробуй ще раз!',
-          show_alert: true
-        });
+        
+        const { formatErrorMessage } = require('./formatter');
+        const { getErrorKeyboard } = require('./keyboards/inline');
+        
+        await bot.editMessageText(
+          formatErrorMessage(),
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            parse_mode: 'HTML',
+            reply_markup: getErrorKeyboard().reply_markup
+          }
+        );
       }
       await bot.answerCallbackQuery(query.id);
       return;

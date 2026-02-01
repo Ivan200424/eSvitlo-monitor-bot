@@ -55,7 +55,7 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes =
   
   // Today's schedule
   if (todayEvents.length > 0) {
-    lines.push(`💡 Оновлено графік відключень <b>на сьогодні, ${todayDate} (${todayName})</b>, для черги ${queue}:`);
+    lines.push(`💡 Графік відключень <b>на сьогодні, ${todayDate} (${todayName})</b>, для черги ${queue}:`);
     lines.push('');
     todayEvents.forEach(event => {
       const start = formatTime(event.start);
@@ -76,7 +76,7 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes =
   
   // Tomorrow's schedule - only show if there are actual outages
   if (tomorrowEvents.length > 0) {
-    lines.push(`💡 Оновлено графік відключень <b>на завтра, ${tomorrowDate} (${tomorrowName})</b>, для черги ${queue}:`);
+    lines.push(`💡 Графік відключень <b>на завтра, ${tomorrowDate} (${tomorrowName})</b>, для черги ${queue}:`);
     lines.push('');
     tomorrowEvents.forEach(event => {
       const start = formatTime(event.start);
@@ -236,7 +236,7 @@ function formatScheduleForChannel(region, queue, scheduleData, todayDate) {
   const dayName = dayNames[date.getDay()];
   const dateStr = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
   
-  lines.push(`💡 Оновлено графік відключень <b>на сьогодні, ${dateStr} (${dayName})</b>, для черги ${queue}:`);
+  lines.push(`💡 Графік відключень <b>на сьогодні, ${dateStr} (${dayName})</b>, для черги ${queue}:`);
   lines.push('');
   
   if (!scheduleData.hasData || scheduleData.events.length === 0) {
@@ -399,6 +399,16 @@ function getCurrentDateTimeForTemplate() {
   };
 }
 
+// Форматувати повідомлення про помилку
+function formatErrorMessage() {
+  const lines = [];
+  lines.push('😅 Щось пішло не так.');
+  lines.push('');
+  lines.push('Якщо бачите, що щось не працює —');
+  lines.push('напишіть нам, будь ласка!');
+  return lines.join('\n');
+}
+
 module.exports = {
   formatScheduleMessage,
   formatNextEventMessage,
@@ -413,4 +423,5 @@ module.exports = {
   formatScheduleChanges,
   formatTemplate,
   getCurrentDateTimeForTemplate,
+  formatErrorMessage,
 };
