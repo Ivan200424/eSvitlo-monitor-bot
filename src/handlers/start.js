@@ -6,6 +6,9 @@ const { REGIONS } = require('../constants/regions');
 // Стан wizard для кожного користувача
 const wizardState = new Map();
 
+// Зберігаємо останній message_id меню для кожного користувача
+const lastMenuMessages = new Map();
+
 // Запустити wizard для нового або існуючого користувача
 async function startWizard(bot, chatId, telegramId, username, mode = 'new') {
   wizardState.set(telegramId, { step: 'region', mode });
@@ -32,6 +35,16 @@ async function handleStart(bot, msg) {
   const username = msg.from.username || msg.from.first_name;
   
   try {
+    // Видаляємо попереднє меню якщо є
+    const lastMenuId = lastMenuMessages.get(telegramId);
+    if (lastMenuId) {
+      try {
+        await bot.deleteMessage(chatId, lastMenuId);
+      } catch (e) {
+        // Ігноруємо якщо не вдалося видалити (наприклад, повідомлення вже видалено)
+      }
+    }
+    
     // Перевіряємо чи користувач вже існує
     const user = usersDb.getUserByTelegramId(telegramId);
     
@@ -39,19 +52,20 @@ async function handleStart(bot, msg) {
       // Check if user was deactivated
       if (!user.is_active) {
         const { getRestorationKeyboard } = require('../keyboards/inline');
-        await bot.sendMessage(
+        const sentMessage = await bot.sendMessage(
           chatId,
           `👋 З поверненням!\n\n` +
           `Ваш профіль було деактивовано.\n\n` +
           `Оберіть опцію:`,
           getRestorationKeyboard()
         );
+        lastMenuMessages.set(telegramId, sentMessage.message_id);
         return;
       }
       
       // Існуючий користувач - показуємо головне меню
       const region = REGIONS[user.region]?.name || user.region;
-      await bot.sendMessage(
+      const sentMessage = await bot.sendMessage(
         chatId,
         `👋 Привіт! Я СвітлоЧек 🤖\n\n` +
         `📍 ${region} | Черга ${user.queue}\n` +
@@ -59,6 +73,7 @@ async function handleStart(bot, msg) {
         `Використовуй меню нижче:`,
         getMainMenu()
       );
+      lastMenuMessages.set(telegramId, sentMessage.message_id);
     } else {
       // Новий користувач - запускаємо wizard
       await startWizard(bot, chatId, telegramId, username, 'new');
@@ -162,8 +177,9 @@ async function handleWizardCallback(bot, query) {
           }
         );
         
-        // Відправляємо головне меню
-        await bot.sendMessage(chatId, 'Головне меню:', getMainMenu());
+        // Відправляємо головне меню і зберігаємо ID
+        const sentMessage = await bot.sendMessage(chatId, 'Головне меню:', getMainMenu());
+        lastMenuMessages.set(telegramId, sentMessage.message_id);
       }
       
       await bot.answerCallbackQuery(query.id);
