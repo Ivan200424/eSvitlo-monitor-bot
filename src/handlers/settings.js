@@ -1,11 +1,14 @@
 const usersDb = require('../database/users');
-const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard } = require('../keyboards/inline');
+const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getDeleteDataConfirmKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
 const { startWizard } = require('./start');
 const config = require('../config');
 
 // Store IP setup conversation states
 const ipSetupStates = new Map();
+
+// IP address validation regex
+const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
 
 // Обробник команди /settings
 async function handleSettings(bot, msg) {
@@ -25,11 +28,11 @@ async function handleSettings(bot, msg) {
     const message = 
       `⚙️ <b>Налаштування</b>\n\n` +
       `📍 Регіон: ${region}\n` +
-      `⚡️ Черга: GPV${user.queue}\n` +
-      `📺 Канал: ${user.channel_id || 'не підключено'}\n` +
-      `🌐 IP: ${user.router_ip || 'не налаштовано'}\n` +
-      `🔔 Сповіщення: ${user.is_active ? 'увімкнено' : 'вимкнено'}\n\n` +
-      `Оберіть опцію:`;
+      `⚡️ Черга: ${user.queue}\n` +
+      `📺 Канал: ${user.channel_id ? '✅' : '❌'}\n` +
+      `🌐 IP: ${user.router_ip ? '✅' : '❌'}\n` +
+      `🔔 Сповіщення: ${user.is_active ? '✅' : '❌'}\n\n` +
+      `Обери опцію:`;
     
     await bot.sendMessage(chatId, message, {
       parse_mode: 'HTML',
@@ -77,11 +80,11 @@ async function handleSettingsCallback(bot, query) {
     if (data === 'settings_alerts') {
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Сповіщення перед відключенням: ${user.notify_before_off} хв\n` +
-        `⏰ Сповіщення перед включенням: ${user.notify_before_on} хв\n` +
-        `🔴 Сповіщення про відключення: ${user.alerts_off_enabled ? 'увімкнено' : 'вимкнено'}\n` +
-        `🟢 Сповіщення про включення: ${user.alerts_on_enabled ? 'увімкнено' : 'вимкнено'}\n\n` +
-        `Оберіть опцію:`;
+        `⏰ Перед відключенням: ${user.notify_before_off} хв\n` +
+        `⏰ Перед включенням: ${user.notify_before_on} хв\n` +
+        `🔴 Відключення: ${user.alerts_off_enabled ? '✅' : '❌'}\n` +
+        `🟢 Включення: ${user.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `Обери опцію:`;
       
       await bot.editMessageText(message, {
         chat_id: chatId,
@@ -127,18 +130,18 @@ async function handleSettingsCallback(bot, query) {
       usersDb.updateUserAlertSettings(telegramId, { alertsOffEnabled: newValue });
       
       await bot.answerCallbackQuery(query.id, {
-        text: `✅ Сповіщення про відключення ${newValue ? 'увімкнено' : 'вимкнено'}`,
+        text: `✅ Відключення ${newValue ? '✅' : '❌'}`,
       });
       
       // Оновлюємо повідомлення
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Сповіщення перед відключенням: ${updatedUser.notify_before_off} хв\n` +
-        `⏰ Сповіщення перед включенням: ${updatedUser.notify_before_on} хв\n` +
-        `🔴 Сповіщення про відключення: ${updatedUser.alerts_off_enabled ? 'увімкнено' : 'вимкнено'}\n` +
-        `🟢 Сповіщення про включення: ${updatedUser.alerts_on_enabled ? 'увімкнено' : 'вимкнено'}\n\n` +
-        `Оберіть опцію:`;
+        `⏰ Перед відключенням: ${updatedUser.notify_before_off} хв\n` +
+        `⏰ Перед включенням: ${updatedUser.notify_before_on} хв\n` +
+        `🔴 Відключення: ${updatedUser.alerts_off_enabled ? '✅' : '❌'}\n` +
+        `🟢 Включення: ${updatedUser.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `Обери опцію:`;
       
       await bot.editMessageText(message, {
         chat_id: chatId,
@@ -155,18 +158,18 @@ async function handleSettingsCallback(bot, query) {
       usersDb.updateUserAlertSettings(telegramId, { alertsOnEnabled: newValue });
       
       await bot.answerCallbackQuery(query.id, {
-        text: `✅ Сповіщення про включення ${newValue ? 'увімкнено' : 'вимкнено'}`,
+        text: `✅ Включення ${newValue ? '✅' : '❌'}`,
       });
       
       // Оновлюємо повідомлення
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Сповіщення перед відключенням: ${updatedUser.notify_before_off} хв\n` +
-        `⏰ Сповіщення перед включенням: ${updatedUser.notify_before_on} хв\n` +
-        `🔴 Сповіщення про відключення: ${updatedUser.alerts_off_enabled ? 'увімкнено' : 'вимкнено'}\n` +
-        `🟢 Сповіщення про включення: ${updatedUser.alerts_on_enabled ? 'увімкнено' : 'вимкнено'}\n\n` +
-        `Оберіть опцію:`;
+        `⏰ Перед відключенням: ${updatedUser.notify_before_off} хв\n` +
+        `⏰ Перед включенням: ${updatedUser.notify_before_on} хв\n` +
+        `🔴 Відключення: ${updatedUser.alerts_off_enabled ? '✅' : '❌'}\n` +
+        `🟢 Включення: ${updatedUser.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `Обери опцію:`;
       
       await bot.editMessageText(message, {
         chat_id: chatId,
@@ -196,11 +199,11 @@ async function handleSettingsCallback(bot, query) {
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
       const message = 
         `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `⏰ Сповіщення перед відключенням: ${updatedUser.notify_before_off} хв\n` +
-        `⏰ Сповіщення перед включенням: ${updatedUser.notify_before_on} хв\n` +
-        `🔴 Сповіщення про відключення: ${updatedUser.alerts_off_enabled ? 'увімкнено' : 'вимкнено'}\n` +
-        `🟢 Сповіщення про включення: ${updatedUser.alerts_on_enabled ? 'увімкнено' : 'вимкнено'}\n\n` +
-        `Оберіть опцію:`;
+        `⏰ Перед відключенням: ${updatedUser.notify_before_off} хв\n` +
+        `⏰ Перед включенням: ${updatedUser.notify_before_on} хв\n` +
+        `🔴 Відключення: ${updatedUser.alerts_off_enabled ? '✅' : '❌'}\n` +
+        `🟢 Включення: ${updatedUser.alerts_on_enabled ? '✅' : '❌'}\n\n` +
+        `Обери опцію:`;
       
       await bot.editMessageText(message, {
         chat_id: chatId,
@@ -208,6 +211,46 @@ async function handleSettingsCallback(bot, query) {
         parse_mode: 'HTML',
         reply_markup: getAlertsSettingsKeyboard().reply_markup,
       });
+      return;
+    }
+    
+    // Delete data
+    if (data === 'settings_delete_data') {
+      await bot.editMessageText(
+        '⚠️ <b>Точно видалити всі дані?</b>\n\n' +
+        'Це видалить:\n' +
+        '• Налаштування\n' +
+        '• Історію статистики\n' +
+        '• Відключить канал\n\n' +
+        'Цю дію неможливо скасувати!',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getDeleteDataConfirmKeyboard().reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Confirm delete data
+    if (data === 'confirm_delete_data') {
+      // Delete user from database
+      usersDb.deleteUser(telegramId);
+      
+      await bot.editMessageText(
+        '👋 <b>Сумно, але ок!</b>\n\n' +
+        'Всі твої дані видалено. Канал відключено.\n\n' +
+        'Якщо захочеш повернутись - просто напиши /start\n\n' +
+        'Бувай! 🤖',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
       return;
     }
     
@@ -420,11 +463,11 @@ async function handleSettingsCallback(bot, query) {
       const message = 
         `⚙️ <b>Налаштування</b>\n\n` +
         `📍 Регіон: ${region}\n` +
-        `⚡️ Черга: GPV${updatedUser.queue}\n` +
-        `📺 Канал: ${updatedUser.channel_id || 'не підключено'}\n` +
-        `🌐 IP: ${updatedUser.router_ip || 'не налаштовано'}\n` +
-        `🔔 Сповіщення: ${updatedUser.is_active ? 'увімкнено' : 'вимкнено'}\n\n` +
-        `Оберіть опцію:`;
+        `⚡️ Черга: ${updatedUser.queue}\n` +
+        `📺 Канал: ${updatedUser.channel_id ? '✅' : '❌'}\n` +
+        `🌐 IP: ${updatedUser.router_ip ? '✅' : '❌'}\n` +
+        `🔔 Сповіщення: ${updatedUser.is_active ? '✅' : '❌'}\n\n` +
+        `Обери опцію:`;
       
       await bot.editMessageText(message, {
         chat_id: chatId,
@@ -442,8 +485,72 @@ async function handleSettingsCallback(bot, query) {
   }
 }
 
+// Handle IP setup conversation
+async function handleIpConversation(bot, msg) {
+  const chatId = msg.chat.id;
+  const telegramId = String(msg.from.id);
+  const text = msg.text;
+  
+  const state = ipSetupStates.get(telegramId);
+  if (!state) return false;
+  
+  try {
+    // Clear timeout
+    if (state.timeout) {
+      clearTimeout(state.timeout);
+    }
+    
+    // Validate IP address format
+    if (!IP_REGEX.test(text)) {
+      await bot.sendMessage(chatId, '❌ Невірний формат IP-адреси. Спробуйте ще раз.\n\nПриклад: 192.168.1.1');
+      
+      // Reset timeout
+      const timeout = setTimeout(() => {
+        ipSetupStates.delete(telegramId);
+      }, 120000);
+      state.timeout = timeout;
+      ipSetupStates.set(telegramId, state);
+      
+      return true;
+    }
+    
+    // Additional validation: check if octets are in valid range
+    const octets = text.split('.').map(Number);
+    if (octets.some(octet => octet < 0 || octet > 255)) {
+      await bot.sendMessage(chatId, '❌ Невірні значення в IP-адресі (кожне число має бути від 0 до 255). Спробуйте ще раз.');
+      
+      // Reset timeout
+      const timeout = setTimeout(() => {
+        ipSetupStates.delete(telegramId);
+      }, 120000);
+      state.timeout = timeout;
+      ipSetupStates.set(telegramId, state);
+      
+      return true;
+    }
+    
+    // Save IP address
+    usersDb.updateUserRouterIp(telegramId, text);
+    ipSetupStates.delete(telegramId);
+    
+    await bot.sendMessage(
+      chatId,
+      `✅ IP-адресу збережено: ${text}\n\n` +
+      `Тепер бот буде моніторити доступність цієї адреси для визначення наявності світла.`
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Помилка в handleIpConversation:', error);
+    ipSetupStates.delete(telegramId);
+    await bot.sendMessage(chatId, '❌ Виникла помилка. Спробуйте ще раз командою /settings');
+    return true;
+  }
+}
+
 module.exports = {
   handleSettings,
   handleSettingsCallback,
+  handleIpConversation,
   ipSetupStates,
 };

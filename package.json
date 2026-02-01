@@ -1,7 +1,7 @@
 {
-  "name": "esvitlo-monitor-bot",
+  "name": "svitlocheck-bot",
   "version": "1.0.0",
-  "description": "Multi-tenant Telegram бот для моніторингу відключень електроенергії в Україні",
+  "description": "Multi-tenant Telegram бот СвітлоЧек для моніторингу відключень електроенергії в Україні",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",

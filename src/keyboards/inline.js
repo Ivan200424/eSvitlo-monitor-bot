@@ -5,8 +5,9 @@ function getMainMenu() {
   return {
     reply_markup: {
       keyboard: [
-        ['📊 Графік', '💡 Статус'],
-        ['⚙️ Налаштування', '❓ Допомога'],
+        ['📊 Графік', '⏱ Таймер'],
+        ['📈 Статистика', '❓ Допомога'],
+        ['⚙️ Налаштування'],
       ],
       resize_keyboard: true,
       persistent: true,
@@ -38,44 +39,25 @@ function getRegionKeyboard() {
   };
 }
 
-// Вибір групи
-function getGroupKeyboard() {
+// Вибір черги (без підгруп - прямий список всіх черг)
+function getQueueKeyboard() {
   const buttons = [];
   const row = [];
   
-  GROUPS.forEach((group, index) => {
+  QUEUES.forEach((queue, index) => {
     row.push({
-      text: `Група ${group}`,
-      callback_data: `group_${group}`,
+      text: queue,
+      callback_data: `queue_${queue}`,
     });
     
-    if (row.length === 3 || index === GROUPS.length - 1) {
+    // 3 кнопки в рядку
+    if (row.length === 3 || index === QUEUES.length - 1) {
       buttons.push([...row]);
       row.length = 0;
     }
   });
   
   buttons.push([{ text: '« Назад', callback_data: 'back_to_region' }]);
-  
-  return {
-    reply_markup: {
-      inline_keyboard: buttons,
-    },
-  };
-}
-
-// Вибір підгрупи
-function getSubgroupKeyboard(group) {
-  const buttons = [];
-  
-  SUBGROUPS.forEach(subgroup => {
-    buttons.push([{
-      text: `${group}.${subgroup}`,
-      callback_data: `subgroup_${group}.${subgroup}`,
-    }]);
-  });
-  
-  buttons.push([{ text: '« Назад', callback_data: 'back_to_group' }]);
   
   return {
     reply_markup: {
@@ -91,7 +73,6 @@ function getConfirmKeyboard() {
       inline_keyboard: [
         [{ text: '✅ Підтвердити', callback_data: 'confirm_setup' }],
         [{ text: '🔄 Змінити регіон', callback_data: 'back_to_region' }],
-        [{ text: '🔄 Змінити чергу', callback_data: 'back_to_group' }],
       ],
     },
   };
@@ -112,7 +93,7 @@ function getSettingsKeyboard(isAdmin = false) {
   }
   
   buttons.push(
-    [{ text: '🔴 Деактивувати', callback_data: 'settings_deactivate' }],
+    [{ text: '🗑️ Видалити мої дані', callback_data: 'settings_delete_data' }],
     [{ text: '🔙 Назад', callback_data: 'back_to_main' }]
   );
   
@@ -185,6 +166,18 @@ function getDeactivateConfirmKeyboard() {
   };
 }
 
+// Підтвердження видалення даних
+function getDeleteDataConfirmKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '❌ Так, видалити', callback_data: 'confirm_delete_data' }],
+        [{ text: '🔙 Назад', callback_data: 'back_to_settings' }],
+      ],
+    },
+  };
+}
+
 // IP моніторинг меню
 function getIpMonitoringKeyboard() {
   return {
@@ -231,7 +224,7 @@ function getHelpKeyboard() {
       inline_keyboard: [
         [{ text: '📖 Як користуватись', callback_data: 'help_howto' }],
         [{ text: '⚠️ Проблеми та рішення', callback_data: 'help_faq' }],
-        [{ text: '🐛 Повідомити про проблему', url: 'https://github.com/Ivan200424/GridBot-feedback/issues/new/choose' }],
+        [{ text: '👨‍💻 Контакт розробника', url: 'https://t.me/th3ivn' }],
         [{ text: '🔙 Назад', callback_data: 'back_to_main' }],
       ],
     },
@@ -275,14 +268,14 @@ function getRestorationKeyboard() {
 module.exports = {
   getMainMenu,
   getRegionKeyboard,
-  getGroupKeyboard,
-  getSubgroupKeyboard,
+  getQueueKeyboard,
   getConfirmKeyboard,
   getSettingsKeyboard,
   getAlertsSettingsKeyboard,
   getAlertTimeKeyboard,
   getAdminKeyboard,
   getDeactivateConfirmKeyboard,
+  getDeleteDataConfirmKeyboard,
   getIpMonitoringKeyboard,
   getIpCancelKeyboard,
   getStatisticsKeyboard,
