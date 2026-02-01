@@ -519,7 +519,7 @@ function getErrorKeyboard() {
 function getDebounceKeyboard(currentValue) {
   const options = [1, 2, 3, 5, 10, 15];
   const buttons = options.map(min => ({
-    text: currentValue == min ? `✓ ${min} хв` : `${min} хв`,
+    text: currentValue === String(min) || currentValue === min ? `✓ ${min} хв` : `${min} хв`,
     callback_data: `debounce_set_${min}`
   }));
   

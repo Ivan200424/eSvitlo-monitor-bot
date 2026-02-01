@@ -703,24 +703,38 @@ async function handleAdminCallback(bot, query) {
     }
 
     if (data === 'admin_clear_db_confirm') {
-      // Очистити таблицю users
+      // Очистити таблицю users з транзакцією для атомарності
       const db = require('../database/db');
-      db.exec('DELETE FROM users');
-      db.exec('DELETE FROM power_history');
-      db.exec('DELETE FROM outage_history');
       
-      await bot.editMessageText(
-        `✅ <b>База очищена</b>\n\n` +
-        `Всі користувачі видалені.\n` +
-        `Нові користувачі можуть починати з /start`,
-        {
-          chat_id: chatId,
-          message_id: query.message.message_id,
-          parse_mode: 'HTML',
-          reply_markup: getAdminKeyboard().reply_markup
-        }
-      );
-      await bot.answerCallbackQuery(query.id, { text: '✅ База очищена' });
+      try {
+        // Використовуємо транзакцію для забезпечення атомарності
+        const transaction = db.transaction(() => {
+          db.exec('DELETE FROM users');
+          db.exec('DELETE FROM power_history');
+          db.exec('DELETE FROM outage_history');
+        });
+        
+        transaction();
+        
+        await bot.editMessageText(
+          `✅ <b>База очищена</b>\n\n` +
+          `Всі користувачі видалені.\n` +
+          `Нові користувачі можуть починати з /start`,
+          {
+            chat_id: chatId,
+            message_id: query.message.message_id,
+            parse_mode: 'HTML',
+            reply_markup: getAdminKeyboard().reply_markup
+          }
+        );
+        await bot.answerCallbackQuery(query.id, { text: '✅ База очищена' });
+      } catch (error) {
+        console.error('Error clearing database:', error);
+        await bot.answerCallbackQuery(query.id, { 
+          text: '❌ Помилка очищення бази', 
+          show_alert: true 
+        });
+      }
       return;
     }
     
