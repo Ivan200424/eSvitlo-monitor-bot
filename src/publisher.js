@@ -3,7 +3,12 @@ const { parseScheduleForQueue, findNextEvent } = require('./parser');
 const { formatScheduleMessage, formatTemplate } = require('./formatter');
 const { getLastSchedule, getPreviousSchedule, addScheduleToHistory, compareSchedules } = require('./database/scheduleHistory');
 const usersDb = require('./database/users');
+const { REGIONS } = require('./constants/regions');
 const crypto = require('crypto');
+
+// Day name constants
+const DAY_NAMES = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+const SHORT_DAY_NAMES = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
 // Публікувати графік з фото та кнопками
 async function publishScheduleWithPhoto(bot, user, region, queue) {
@@ -58,16 +63,13 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
     // Apply custom caption template if set
     if (user.schedule_caption) {
       const now = new Date();
-      const dayNames = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
-      const shortDayNames = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-      const { REGIONS } = require('./constants/regions');
       
       const variables = {
         d: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`,
         dm: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}`,
         dd: 'сьогодні',
-        sdw: shortDayNames[now.getDay()],
-        fdw: dayNames[now.getDay()],
+        sdw: SHORT_DAY_NAMES[now.getDay()],
+        fdw: DAY_NAMES[now.getDay()],
         queue: queue,
         region: REGIONS[region]?.name || region
       };

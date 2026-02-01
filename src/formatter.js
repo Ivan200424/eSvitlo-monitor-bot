@@ -376,16 +376,27 @@ function formatTemplate(template, variables) {
   
   let result = template;
   
-  // Заміна змінних
+  // Заміна змінних - use simple string replace for better performance
   for (const [key, value] of Object.entries(variables)) {
-    const regex = new RegExp(`\\{${key}\\}`, 'g');
-    result = result.replace(regex, value || '');
+    const placeholder = `{${key}}`;
+    while (result.includes(placeholder)) {
+      result = result.replace(placeholder, value || '');
+    }
   }
   
   // Заміна <br> на новий рядок
   result = result.replace(/<br>/g, '\n');
   
   return result;
+}
+
+// Форматувати поточну дату/час для шаблонів
+function getCurrentDateTimeForTemplate() {
+  const now = new Date();
+  return {
+    timeStr: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+    dateStr: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`
+  };
 }
 
 module.exports = {
@@ -401,4 +412,5 @@ module.exports = {
   formatStatsForChannelPopup,
   formatScheduleChanges,
   formatTemplate,
+  getCurrentDateTimeForTemplate,
 };

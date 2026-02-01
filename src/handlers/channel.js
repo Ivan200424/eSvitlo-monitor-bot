@@ -10,6 +10,7 @@ const CHANNEL_NAME_PREFIX = 'СвітлоЧек 🤖 ';
 const CHANNEL_DESCRIPTION_BASE = '🤖 СвітлоЧек — слідкує, щоб ти не слідкував';
 const PHOTO_PATH = path.join(__dirname, '../../photo_for_channels.PNG');
 const PENDING_CHANNEL_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes
+const FORMAT_SETTINGS_MESSAGE = '📋 <b>Формат публікацій</b>\n\nНалаштуйте формат повідомлень для вашого каналу:';
 
 // Обробник команди /channel
 async function handleChannel(bot, msg) {
@@ -350,8 +351,7 @@ async function handleConversation(bot, msg) {
       const { getFormatSettingsKeyboard } = require('../keyboards/inline');
       await bot.sendMessage(
         chatId,
-        '📋 <b>Формат публікацій</b>\n\n' +
-        'Налаштуйте формат повідомлень для вашого каналу:',
+        FORMAT_SETTINGS_MESSAGE,
         {
           parse_mode: 'HTML',
           ...getFormatSettingsKeyboard(user)
@@ -377,8 +377,7 @@ async function handleConversation(bot, msg) {
       const { getFormatSettingsKeyboard } = require('../keyboards/inline');
       await bot.sendMessage(
         chatId,
-        '📋 <b>Формат публікацій</b>\n\n' +
-        'Налаштуйте формат повідомлень для вашого каналу:',
+        FORMAT_SETTINGS_MESSAGE,
         {
           parse_mode: 'HTML',
           ...getFormatSettingsKeyboard(user)
@@ -404,8 +403,7 @@ async function handleConversation(bot, msg) {
       const { getFormatSettingsKeyboard } = require('../keyboards/inline');
       await bot.sendMessage(
         chatId,
-        '📋 <b>Формат публікацій</b>\n\n' +
-        'Налаштуйте формат повідомлень для вашого каналу:',
+        FORMAT_SETTINGS_MESSAGE,
         {
           parse_mode: 'HTML',
           ...getFormatSettingsKeyboard(user)
@@ -431,8 +429,7 @@ async function handleConversation(bot, msg) {
       const { getFormatSettingsKeyboard } = require('../keyboards/inline');
       await bot.sendMessage(
         chatId,
-        '📋 <b>Формат публікацій</b>\n\n' +
-        'Налаштуйте формат повідомлень для вашого каналу:',
+        FORMAT_SETTINGS_MESSAGE,
         {
           parse_mode: 'HTML',
           ...getFormatSettingsKeyboard(user)
@@ -1113,10 +1110,8 @@ async function handleChannelCallback(bot, query) {
       }
       
       try {
-        const { formatTemplate } = require('../formatter');
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+        const { formatTemplate, getCurrentDateTimeForTemplate } = require('../formatter');
+        const { timeStr, dateStr } = getCurrentDateTimeForTemplate();
         
         const template = user.power_on_text || '💡 Світло з\'явилось о {time}';
         const text = formatTemplate(template, {
@@ -1152,10 +1147,8 @@ async function handleChannelCallback(bot, query) {
       }
       
       try {
-        const { formatTemplate } = require('../formatter');
-        const now = new Date();
-        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+        const { formatTemplate, getCurrentDateTimeForTemplate } = require('../formatter');
+        const { timeStr, dateStr } = getCurrentDateTimeForTemplate();
         
         const template = user.power_off_text || '📴 Світло зникло о {time}';
         const text = formatTemplate(template, {
