@@ -633,7 +633,6 @@ async function handleSettingsCallback(bot, query) {
       message += `📺 Канал: ${updatedUser.channel_id ? updatedUser.channel_id + ' ✅' : 'не підключено'}\n`;
       message += `📡 IP: ${updatedUser.router_ip ? updatedUser.router_ip + ' ✅' : 'не підключено'}\n`;
       message += `🔔 Сповіщення: ${updatedUser.is_active ? 'увімкнено ✅' : 'вимкнено'}\n\n`;
-      message += '⸻\n\n';
       message += 'Керування:\n';
       
       await bot.editMessageText(message, {

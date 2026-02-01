@@ -458,6 +458,18 @@ function updateLastScheduleMessageId(telegramId, messageId) {
   return result.changes > 0;
 }
 
+// Оновити статус паузи каналу користувача
+function updateUserChannelPaused(telegramId, paused) {
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET channel_paused = ?, updated_at = CURRENT_TIMESTAMP
+    WHERE telegram_id = ?
+  `);
+  
+  const result = stmt.run(paused ? 1 : 0, telegramId);
+  return result.changes > 0;
+}
+
 module.exports = {
   createUser,
   getUserByTelegramId,
@@ -491,4 +503,5 @@ module.exports = {
   updateUserFormatSettings,
   getUserFormatSettings,
   updateLastScheduleMessageId,
+  updateUserChannelPaused,
 };

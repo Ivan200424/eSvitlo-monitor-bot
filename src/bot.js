@@ -339,7 +339,6 @@ bot.on('callback_query', async (query) => {
       message += `📺 Канал: ${user.channel_id ? user.channel_id + ' ✅' : 'не підключено'}\n`;
       message += `📡 IP: ${user.router_ip ? user.router_ip + ' ✅' : 'не підключено'}\n`;
       message += `🔔 Сповіщення: ${user.is_active ? 'увімкнено ✅' : 'вимкнено'}\n\n`;
-      message += '⸻\n\n';
       message += 'Керування:\n';
       
       // Include keyboard - will be appended after message
@@ -375,6 +374,8 @@ bot.on('callback_query', async (query) => {
           botStatus = 'paused';
         }
         
+        const channelPaused = user.channel_paused === 1;
+        
         // Build main menu message with beta warning
         let message = '<b>🚧 Бот у розробці</b>\n';
         message += '<i>Деякі функції можуть працювати нестабільно</i>\n\n';
@@ -393,7 +394,7 @@ bot.on('callback_query', async (query) => {
               chat_id: query.message.chat.id,
               message_id: query.message.message_id,
               parse_mode: 'HTML',
-              reply_markup: getMainMenu(botStatus).reply_markup,
+              reply_markup: getMainMenu(botStatus, channelPaused).reply_markup,
             }
           );
         } catch (error) {
@@ -408,7 +409,7 @@ bot.on('callback_query', async (query) => {
             message,
             {
               parse_mode: 'HTML',
-              ...getMainMenu(botStatus)
+              ...getMainMenu(botStatus, channelPaused)
             }
           );
         }
