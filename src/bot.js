@@ -4,7 +4,7 @@ const config = require('./config');
 // Import handlers
 const { handleStart, handleWizardCallback } = require('./handlers/start');
 const { handleSchedule, handleNext, handleTimer } = require('./handlers/schedule');
-const { handleSettings, handleSettingsCallback } = require('./handlers/settings');
+const { handleSettings, handleSettingsCallback, handleIpConversation } = require('./handlers/settings');
 const { 
   handleAdmin, 
   handleAdminCallback, 
@@ -68,16 +68,35 @@ bot.on('message', async (msg) => {
         await handleSchedule(bot, msg);
         break;
         
+      case '⏱ Таймер':
+      case '⏰ Таймер':
+        await handleTimer(bot, msg);
+        break;
+        
       case '💡 Статус':
       case '⏭ Наступна подія':
         await handleNext(bot, msg);
         break;
         
-      case '⏰ Таймер':
-        await handleTimer(bot, msg);
+      case '📈 Статистика':
+      case '📊 Статистика':
+        await bot.sendMessage(
+          chatId,
+          '📊 Статистика\n\nОберіть розділ:',
+          getStatisticsKeyboard()
+        );
         break;
         
       case '⚙️ Налаштування':
+        // Clear any pending IP setup state
+        const { ipSetupStates } = require('./handlers/settings');
+        const telegramId = String(msg.from.id);
+        const ipState = ipSetupStates.get(telegramId);
+        if (ipState && ipState.timeout) {
+          clearTimeout(ipState.timeout);
+          ipSetupStates.delete(telegramId);
+        }
+        
         await handleSettings(bot, msg);
         break;
         
@@ -99,7 +118,11 @@ bot.on('message', async (msg) => {
         break;
         
       default:
-        // Handle IP setup conversation
+        // Try IP setup conversation first
+        const ipHandled = await handleIpConversation(bot, msg);
+        if (ipHandled) break;
+        
+        // Handle channel conversation
         await handleConversation(bot, msg);
         break;
     }
@@ -129,6 +152,7 @@ bot.on('callback_query', async (query) => {
         data.startsWith('alert_') ||
         data.startsWith('ip_') ||
         data === 'confirm_deactivate' ||
+        data === 'confirm_delete_data' ||
         data === 'back_to_settings' ||
         data === 'back_to_main') {
       await handleSettingsCallback(bot, query);

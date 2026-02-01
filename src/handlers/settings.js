@@ -1,5 +1,5 @@
 const usersDb = require('../database/users');
-const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard } = require('../keyboards/inline');
+const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getDeleteDataConfirmKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
 const { startWizard } = require('./start');
 const config = require('../config');
@@ -208,6 +208,46 @@ async function handleSettingsCallback(bot, query) {
         parse_mode: 'HTML',
         reply_markup: getAlertsSettingsKeyboard().reply_markup,
       });
+      return;
+    }
+    
+    // Delete data
+    if (data === 'settings_delete_data') {
+      await bot.editMessageText(
+        '⚠️ <b>Точно видалити всі дані?</b>\n\n' +
+        'Це видалить:\n' +
+        '• Налаштування\n' +
+        '• Історію статистики\n' +
+        '• Відключить канал\n\n' +
+        'Цю дію неможливо скасувати!',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getDeleteDataConfirmKeyboard().reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Confirm delete data
+    if (data === 'confirm_delete_data') {
+      // Delete user from database
+      usersDb.deleteUser(telegramId);
+      
+      await bot.editMessageText(
+        '👋 <b>Сумно, але ок!</b>\n\n' +
+        'Всі твої дані видалено. Канал відключено.\n\n' +
+        'Якщо захочеш повернутись - просто напиши /start\n\n' +
+        'Бувай! 🤖',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
       return;
     }
     
@@ -442,8 +482,73 @@ async function handleSettingsCallback(bot, query) {
   }
 }
 
+// Handle IP setup conversation
+async function handleIpConversation(bot, msg) {
+  const chatId = msg.chat.id;
+  const telegramId = String(msg.from.id);
+  const text = msg.text;
+  
+  const state = ipSetupStates.get(telegramId);
+  if (!state) return false;
+  
+  try {
+    // Clear timeout
+    if (state.timeout) {
+      clearTimeout(state.timeout);
+    }
+    
+    // Validate IP address format
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (!ipRegex.test(text)) {
+      await bot.sendMessage(chatId, '❌ Невірний формат IP-адреси. Спробуйте ще раз.\n\nПриклад: 192.168.1.1');
+      
+      // Reset timeout
+      const timeout = setTimeout(() => {
+        ipSetupStates.delete(telegramId);
+      }, 120000);
+      state.timeout = timeout;
+      ipSetupStates.set(telegramId, state);
+      
+      return true;
+    }
+    
+    // Additional validation: check if octets are in valid range
+    const octets = text.split('.').map(Number);
+    if (octets.some(octet => octet < 0 || octet > 255)) {
+      await bot.sendMessage(chatId, '❌ Невірні значення в IP-адресі (кожне число має бути від 0 до 255). Спробуйте ще раз.');
+      
+      // Reset timeout
+      const timeout = setTimeout(() => {
+        ipSetupStates.delete(telegramId);
+      }, 120000);
+      state.timeout = timeout;
+      ipSetupStates.set(telegramId, state);
+      
+      return true;
+    }
+    
+    // Save IP address
+    usersDb.updateUserRouterIp(telegramId, text);
+    ipSetupStates.delete(telegramId);
+    
+    await bot.sendMessage(
+      chatId,
+      `✅ IP-адресу збережено: ${text}\n\n` +
+      `Тепер бот буде моніторити доступність цієї адреси для визначення наявності світла.`
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Помилка в handleIpConversation:', error);
+    ipSetupStates.delete(telegramId);
+    await bot.sendMessage(chatId, '❌ Виникла помилка. Спробуйте ще раз командою /settings');
+    return true;
+  }
+}
+
 module.exports = {
   handleSettings,
   handleSettingsCallback,
+  handleIpConversation,
   ipSetupStates,
 };

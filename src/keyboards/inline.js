@@ -5,8 +5,9 @@ function getMainMenu() {
   return {
     reply_markup: {
       keyboard: [
-        ['📊 Графік', '💡 Статус'],
-        ['⚙️ Налаштування', '❓ Допомога'],
+        ['📊 Графік', '⏱ Таймер'],
+        ['📈 Статистика', '❓ Допомога'],
+        ['⚙️ Налаштування'],
       ],
       resize_keyboard: true,
       persistent: true,
@@ -92,7 +93,7 @@ function getSettingsKeyboard(isAdmin = false) {
   }
   
   buttons.push(
-    [{ text: '🔴 Деактивувати', callback_data: 'settings_deactivate' }],
+    [{ text: '🗑️ Видалити мої дані', callback_data: 'settings_delete_data' }],
     [{ text: '🔙 Назад', callback_data: 'back_to_main' }]
   );
   
@@ -160,6 +161,18 @@ function getDeactivateConfirmKeyboard() {
       inline_keyboard: [
         [{ text: '✅ Так, деактивувати', callback_data: 'confirm_deactivate' }],
         [{ text: '❌ Скасувати', callback_data: 'back_to_settings' }],
+      ],
+    },
+  };
+}
+
+// Підтвердження видалення даних
+function getDeleteDataConfirmKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '❌ Так, видалити', callback_data: 'confirm_delete_data' }],
+        [{ text: '🔙 Назад', callback_data: 'back_to_settings' }],
       ],
     },
   };
@@ -262,6 +275,7 @@ module.exports = {
   getAlertTimeKeyboard,
   getAdminKeyboard,
   getDeactivateConfirmKeyboard,
+  getDeleteDataConfirmKeyboard,
   getIpMonitoringKeyboard,
   getIpCancelKeyboard,
   getStatisticsKeyboard,
