@@ -146,3 +146,5 @@ vite.config.ts.timestamp-*
 
 # Temporary test files
 test-changes.js
+test-ui-fixes.js
+test-integration.js
