@@ -22,7 +22,8 @@ const {
   handleChannelCallback, 
   handleCancelChannel 
 } = require('./handlers/channel');
-const { getMainMenu, getHelpKeyboard, getStatisticsKeyboard } = require('./keyboards/inline');
+const { getMainMenu, getHelpKeyboard, getStatisticsKeyboard, getSettingsKeyboard } = require('./keyboards/inline');
+const { REGIONS } = require('./constants/regions');
 
 // Create bot instance
 const bot = new TelegramBot(config.botToken, { polling: true });
@@ -61,71 +62,16 @@ bot.on('message', async (msg) => {
   const text = msg.text;
   
   try {
-    // Handle main menu buttons
-    switch (text) {
-      case '📊 Графік':
-      case '📋 Графік':
-        await handleSchedule(bot, msg);
-        break;
-        
-      case '⏱ Таймер':
-      case '⏰ Таймер':
-        await handleTimer(bot, msg);
-        break;
-        
-      case '💡 Статус':
-      case '⏭ Наступна подія':
-        await handleNext(bot, msg);
-        break;
-        
-      case '📈 Статистика':
-      case '📊 Статистика':
-        await bot.sendMessage(
-          chatId,
-          '📊 Статистика\n\nОберіть розділ:',
-          getStatisticsKeyboard()
-        );
-        break;
-        
-      case '⚙️ Налаштування':
-        // Clear any pending IP setup state
-        const { ipSetupStates } = require('./handlers/settings');
-        const telegramId = String(msg.from.id);
-        const ipState = ipSetupStates.get(telegramId);
-        if (ipState && ipState.timeout) {
-          clearTimeout(ipState.timeout);
-          ipSetupStates.delete(telegramId);
-        }
-        
-        await handleSettings(bot, msg);
-        break;
-        
-      case '❓ Допомога':
-      case '❔ Допомога':
-        await bot.sendMessage(
-          chatId,
-          '🤖 Допомога\n\nОберіть розділ:',
-          getHelpKeyboard()
-        );
-        break;
-        
-      case '📊 Статистика':
-        await bot.sendMessage(
-          chatId,
-          '📊 Статистика\n\nОберіть розділ:',
-          getStatisticsKeyboard()
-        );
-        break;
-        
-      default:
-        // Try IP setup conversation first
-        const ipHandled = await handleIpConversation(bot, msg);
-        if (ipHandled) break;
-        
-        // Handle channel conversation
-        await handleConversation(bot, msg);
-        break;
-    }
+    // Main menu buttons are now handled via inline keyboard callbacks
+    // Keeping only conversation handlers for IP setup and channel setup
+    
+    // Try IP setup conversation first
+    const ipHandled = await handleIpConversation(bot, msg);
+    if (ipHandled) return;
+    
+    // Handle channel conversation
+    await handleConversation(bot, msg);
+    
   } catch (error) {
     console.error('Помилка обробки повідомлення:', error);
   }
@@ -147,14 +93,107 @@ bot.on('callback_query', async (query) => {
       return;
     }
     
+    // Menu callbacks
+    if (data === 'menu_schedule') {
+      await handleSchedule(bot, { ...query.message, from: query.from });
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (data === 'menu_timer') {
+      await handleTimer(bot, { ...query.message, from: query.from });
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (data === 'menu_stats') {
+      await bot.editMessageText(
+        '📊 Статистика\n\nОберіть розділ:',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: getStatisticsKeyboard().reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (data === 'menu_help') {
+      await bot.editMessageText(
+        '🤖 Допомога\n\nОберіть розділ:',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          reply_markup: getHelpKeyboard().reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (data === 'menu_settings') {
+      const usersDb = require('./database/users');
+      const telegramId = String(query.from.id);
+      const user = usersDb.getUserByTelegramId(telegramId);
+      
+      if (!user) {
+        await bot.answerCallbackQuery(query.id, { text: '❌ Спочатку налаштуйте бота командою /start' });
+        return;
+      }
+      
+      const isAdmin = config.adminIds.includes(telegramId) || telegramId === config.ownerId;
+      const region = REGIONS[user.region]?.name || user.region;
+      
+      await bot.editMessageText(
+        `⚙️ <b>Налаштування</b>\n\n` +
+        `📍 Регіон: ${region}\n` +
+        `⚡️ Черга: ${user.queue}\n` +
+        `📺 Канал: ${user.channel_id ? '✅' : '❌'}\n` +
+        `🌐 IP: ${user.router_ip ? '✅' : '❌'}\n` +
+        `🔔 Сповіщення: ${user.is_active ? '✅' : '❌'}\n\n` +
+        `Обери опцію:`,
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getSettingsKeyboard(isAdmin).reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (data === 'back_to_main') {
+      const usersDb = require('./database/users');
+      const telegramId = String(query.from.id);
+      const user = usersDb.getUserByTelegramId(telegramId);
+      
+      if (user) {
+        const region = REGIONS[user.region]?.name || user.region;
+        await bot.editMessageText(
+          `👋 Привіт! Я СвітлоЧек 🤖\n\n` +
+          `📍 ${region} | Черга ${user.queue}\n` +
+          `🔔 Сповіщення: ${user.is_active ? '✅' : '❌'}\n\n` +
+          `Використовуй меню нижче:`,
+          {
+            chat_id: query.message.chat.id,
+            message_id: query.message.message_id,
+            reply_markup: getMainMenu().reply_markup,
+          }
+        );
+      }
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
     // Settings callbacks
     if (data.startsWith('settings_') || 
         data.startsWith('alert_') ||
         data.startsWith('ip_') ||
         data === 'confirm_deactivate' ||
         data === 'confirm_delete_data' ||
-        data === 'back_to_settings' ||
-        data === 'back_to_main') {
+        data === 'back_to_settings') {
       await handleSettingsCallback(bot, query);
       return;
     }
