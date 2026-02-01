@@ -79,28 +79,64 @@ async function handleSettingsCallback(bot, query) {
     
     // Налаштування алертів
     if (data === 'settings_alerts') {
-      const offTime = user.notify_before_off === 0 ? 'Вимкнено' : `${user.notify_before_off} хв`;
-      const onTime = user.notify_before_on === 0 ? 'Вимкнено' : `${user.notify_before_on} хв`;
-      const offStatus = user.alerts_off_enabled && user.notify_before_off > 0 ? '✅' : '❌';
-      const onStatus = user.alerts_on_enabled && user.notify_before_on > 0 ? '✅' : '❌';
-      
       const message = 
-        `🔔 <b>Налаштування сповіщень</b>\n\n` +
-        `📴 <b>Сповіщення перед ВІДКЛЮЧЕННЯМ світла</b>\n` +
-        `(попередить за X хвилин до планового відключення)\n` +
-        `⏰ Зараз: ${offTime} | Статус: ${offStatus}\n\n` +
-        `📳 <b>Сповіщення перед ВКЛЮЧЕННЯМ світла</b>\n` +
-        `(попередить за X хвилин до планового включення)\n` +
-        `⏰ Зараз: ${onTime} | Статус: ${onStatus}\n\n` +
-        `Обери опцію:`;
+        `🔔 <b>Сповіщення</b>\n\n` +
+        `Статус: ${user.is_active ? '✅ Увімкнено' : '❌ Вимкнено'}\n\n` +
+        (user.is_active ? 
+          'Ви отримуєте:\n' +
+          '• Зміни графіка\n' +
+          '• Фактичні відключення' : 
+          'Сповіщення вимкнено');
+      
+      // Simple keyboard with toggle button
+      const keyboard = {
+        inline_keyboard: [
+          [{ text: user.is_active ? '🔕 Вимкнути' : '🔔 Увімкнути', callback_data: 'alert_toggle' }],
+          [{ text: '← Назад', callback_data: 'back_to_settings' }]
+        ]
+      };
       
       await bot.editMessageText(message, {
         chat_id: chatId,
         message_id: query.message.message_id,
         parse_mode: 'HTML',
-        reply_markup: getAlertsSettingsKeyboard().reply_markup,
+        reply_markup: keyboard,
       });
       await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Toggle alerts on/off
+    if (data === 'alert_toggle') {
+      const newValue = !user.is_active;
+      usersDb.setUserActive(telegramId, newValue);
+      
+      const updatedUser = usersDb.getUserByTelegramId(telegramId);
+      const message = 
+        `🔔 <b>Сповіщення</b>\n\n` +
+        `Статус: ${updatedUser.is_active ? '✅ Увімкнено' : '❌ Вимкнено'}\n\n` +
+        (updatedUser.is_active ? 
+          'Ви отримуєте:\n' +
+          '• Зміни графіка\n' +
+          '• Фактичні відключення' : 
+          'Сповіщення вимкнено');
+      
+      const keyboard = {
+        inline_keyboard: [
+          [{ text: updatedUser.is_active ? '🔕 Вимкнути' : '🔔 Увімкнути', callback_data: 'alert_toggle' }],
+          [{ text: '← Назад', callback_data: 'back_to_settings' }]
+        ]
+      };
+      
+      await bot.editMessageText(message, {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: 'HTML',
+        reply_markup: keyboard,
+      });
+      await bot.answerCallbackQuery(query.id, {
+        text: `✅ Сповіщення ${newValue ? 'увімкнено' : 'вимкнено'}`,
+      });
       return;
     }
     
@@ -263,7 +299,7 @@ async function handleSettingsCallback(bot, query) {
       await bot.editMessageText(
         '⚠️ <b>Увага</b>\n\n' +
         'Ви збираєтесь видалити всі дані.\n' +
-        'Цю дію не можна скасувати.',
+        'Цю дію неможливо скасувати.',
         {
           chat_id: chatId,
           message_id: query.message.message_id,
@@ -278,7 +314,7 @@ async function handleSettingsCallback(bot, query) {
     // Delete data - Step 2
     if (data === 'delete_data_step2') {
       await bot.editMessageText(
-        '❗ <b>Підтвердіть дію</b>\n\n' +
+        '❗ <b>Підтвердження</b>\n\n' +
         'Видалити всі дані?',
         {
           chat_id: chatId,
@@ -568,7 +604,7 @@ async function handleSettingsCallback(bot, query) {
       const { getAdminKeyboard } = require('../keyboards/inline');
       
       await bot.editMessageText(
-        '👨‍💼 <b>Адмін панель</b>\n\nОберіть опцію:',
+        '🔧 <b>Адмін-панель</b>',
         {
           chat_id: chatId,
           message_id: query.message.message_id,
@@ -585,14 +621,16 @@ async function handleSettingsCallback(bot, query) {
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
       const userIsAdmin = isAdmin(telegramId, config.adminIds, config.ownerId);
       const region = REGIONS[updatedUser.region]?.name || updatedUser.region;
-      const message = 
-        `⚙️ <b>Налаштування</b>\n\n` +
-        `📍 Регіон: ${region}\n` +
-        `⚡️ Черга: ${updatedUser.queue}\n` +
-        `📺 Канал: ${updatedUser.channel_id ? '✅' : '❌'}\n` +
-        `🌐 IP: ${updatedUser.router_ip ? '✅' : '❌'}\n` +
-        `🔔 Сповіщення: ${updatedUser.is_active ? '✅' : '❌'}\n\n` +
-        `Обери опцію:`;
+      
+      // Build settings message according to new format
+      let message = '⚙️ <b>Налаштування</b>\n\n';
+      message += 'Поточні параметри:\n\n';
+      message += `📍 Регіон: ${region} • ${updatedUser.queue}\n`;
+      message += `📺 Канал: ${updatedUser.channel_id ? updatedUser.channel_id + ' ✅' : 'не підключено'}\n`;
+      message += `📡 IP: ${updatedUser.router_ip ? updatedUser.router_ip + ' ✅' : 'не підключено'}\n`;
+      message += `🔔 Сповіщення: ${updatedUser.is_active ? 'увімкнено ✅' : 'вимкнено'}\n\n`;
+      message += '⸻\n\n';
+      message += 'Керування:\n';
       
       await bot.editMessageText(message, {
         chat_id: chatId,

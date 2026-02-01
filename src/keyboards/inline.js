@@ -88,21 +88,23 @@ function getConfirmKeyboard() {
 function getSettingsKeyboard(isAdmin = false) {
   const buttons = [
     [
-      { text: '📍 Регіон/черга', callback_data: 'settings_region' },
-      { text: '🔔 Сповіщення', callback_data: 'settings_alerts' }
+      { text: '📍 Регіон', callback_data: 'settings_region' },
+      { text: '📺 Канал', callback_data: 'settings_channel' }
     ],
     [
-      { text: '🌐 IP моніторинг', callback_data: 'settings_ip' },
-      { text: '📺 Канал', callback_data: 'settings_channel' }
+      { text: '📡 IP', callback_data: 'settings_ip' },
+      { text: '🔔 Сповіщення', callback_data: 'settings_alerts' }
     ],
   ];
   
-  if (isAdmin) {
-    buttons.push([{ text: '👑 Адмін-панель', callback_data: 'settings_admin' }]);
-  }
+  // Separator line (appears as text, not a button)
+  // We'll add "Небезпечна дія:" in the message text instead
   
   buttons.push(
-    [{ text: '🗑️ Видалити дані', callback_data: 'settings_delete_data' }],
+    [{ text: '🗑 Видалити всі дані', callback_data: 'settings_delete_data' }]
+  );
+  
+  buttons.push(
     [
       { text: '← Назад', callback_data: 'back_to_main' },
       { text: '⤴︎ Меню', callback_data: 'back_to_main' }
@@ -181,13 +183,11 @@ function getAdminKeyboard() {
           { text: '👥 Користувачі', callback_data: 'admin_users' }
         ],
         [
-          { text: '⏱️ Інтервали', callback_data: 'admin_intervals' },
+          { text: '📢 Розсилка', callback_data: 'admin_broadcast' },
           { text: '💻 Система', callback_data: 'admin_system' }
         ],
-        [{ text: '⏸️ Режим паузи', callback_data: 'admin_pause' }],
         [
-          { text: '← Назад', callback_data: 'menu_settings' },
-          { text: '⤴︎ Меню', callback_data: 'back_to_main' }
+          { text: '← Назад', callback_data: 'back_to_settings' }
         ],
       ],
     },
@@ -267,8 +267,8 @@ function getDeleteDataConfirmKeyboard() {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '⬅️ Скасувати', callback_data: 'back_to_settings' }],
-        [{ text: '➡️ Продовжити', callback_data: 'delete_data_step2' }],
+        [{ text: '← Скасувати', callback_data: 'back_to_settings' }],
+        [{ text: '→ Продовжити', callback_data: 'delete_data_step2' }],
       ],
     },
   };
@@ -279,7 +279,7 @@ function getDeleteDataFinalKeyboard() {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: '❌ Ні', callback_data: 'back_to_settings' }],
+        [{ text: '← Ні', callback_data: 'back_to_settings' }],
         [{ text: '🗑 Так, видалити', callback_data: 'confirm_delete_data' }],
       ],
     },
@@ -336,7 +336,7 @@ function getHelpKeyboard() {
     reply_markup: {
       inline_keyboard: [
         [{ text: '📖 Інструкція', callback_data: 'help_howto' }],
-        [{ text: '💬 Обговорення/Підтримка', url: 'https://t.me/eSvitloChat' }],
+        [{ text: '💬 Обговорення/Підтримка', url: 'https://t.me/svitlocheckchat' }],
         [{ text: '⤴︎ Меню', callback_data: 'back_to_main' }],
       ],
     },
@@ -490,7 +490,7 @@ function getErrorKeyboard() {
     reply_markup: {
       inline_keyboard: [
         [{ text: '🔄 Спробувати ще', callback_data: 'back_to_main' }],
-        [{ text: '💬 Підтримка', url: 'https://t.me/eSvitloChat' }],
+        [{ text: '💬 Підтримка', url: 'https://t.me/svitlocheckchat' }],
       ],
     },
   };

@@ -74,13 +74,21 @@ async function handleStart(bot, msg) {
         botStatus = 'paused';
       }
       
+      // Build main menu message
+      let message = '🚧 Бот у розробці\n';
+      message += 'Деякі функції можуть працювати нестабільно\n\n';
+      message += '🏠 <b>Головне меню</b>\n\n';
+      message += `📍 Регіон: ${region} • ${user.queue}\n`;
+      message += `📺 Канал: ${user.channel_id ? user.channel_id + ' ✅' : 'не підключено'}\n`;
+      message += `🔔 Сповіщення: ${user.is_active ? 'увімкнено ✅' : 'вимкнено'}\n`;
+      
       const sentMessage = await bot.sendMessage(
         chatId,
-        `👋 Привіт! Я СвітлоЧек 🤖\n\n` +
-        `📍 ${region} | Черга ${user.queue}\n` +
-        `🔔 Сповіщення: ${user.is_active ? '✅' : '❌'}\n\n` +
-        `Використовуй меню нижче:`,
-        getMainMenu(botStatus)
+        message,
+        {
+          parse_mode: 'HTML',
+          ...getMainMenu(botStatus)
+        }
       );
       lastMenuMessages.set(telegramId, sentMessage.message_id);
     } else {
