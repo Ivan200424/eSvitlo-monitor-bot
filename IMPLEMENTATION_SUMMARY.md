@@ -1,106 +1,141 @@
-# СвітлоЧек - Implementation Summary
+# Implementation Summary: Fix QUEUES Import and Inline Keyboard
 
-## ✅ Successfully Implemented
+## ✅ Completed Changes
 
-### 🔴 Critical Bug Fixes (4/4)
-1. ✅ **Session expired callback errors** - Fixed routing conflict where `confirm_` callbacks were incorrectly handled
-2. ✅ **Owner ID 1026177113** - Set in config.js with full permissions
-3. ✅ **IP monitoring** - Added handleIpConversation with proper validation and error handling
-4. ✅ **Queue format** - Changed from "GPV3.1" to "Черга 3.1" throughout UI (API still uses GPV internally)
+### 1. Bug Fix: QUEUES Import
+**File:** `src/keyboards/inline.js`
+- **Problem:** QUEUES variable was used but not imported, causing "QUEUES is not defined" error
+- **Solution:** Added QUEUES to the import statement from '../constants/regions'
+- **Code Change:**
+  ```javascript
+  // Before
+  const { REGIONS, GROUPS, SUBGROUPS } = require('../constants/regions');
+  
+  // After
+  const { REGIONS, GROUPS, SUBGROUPS, QUEUES } = require('../constants/regions');
+  ```
 
-### 🎨 Complete Rebranding (5/5)
-1. ✅ Bot name: "eSvitlo Monitor Bot" → "СвітлоЧек" 🤖
-2. ✅ Channel prefix: "GridBot ⚡️" → "СвітлоЧек 🤖"
-3. ✅ Friendly Ukrainian communication with emoji
-4. ✅ Updated package.json, README.md, API user-agent
-5. ✅ Welcome message: "👋 Привіт! Я СвітлоЧек 🤖"
+### 2. UI Enhancement: Reply Keyboard → Inline Keyboard
+**File:** `src/keyboards/inline.js`
+- **Problem:** Main menu used Reply Keyboard which creates persistent buttons at bottom of chat
+- **Solution:** Converted to Inline Keyboard with callback_data for better UX
+- **Benefits:**
+  - Buttons appear inline with the message
+  - Messages can be edited when navigating
+  - Better visual appearance
+  - No need to hide/show keyboard
 
-### ⚡ New Features (3/3 critical)
-1. ✅ **Simplified queue selection** - Removed groups, direct list of all 12 queues (1.1-6.2)
-2. ✅ **Regions updated** - Київщина, Дніпропетровщина, Одещина
-3. ✅ **Timezone** - Europe/Kyiv enforced
+**Code Change:**
+```javascript
+// Before (Reply Keyboard)
+function getMainMenu() {
+  return {
+    reply_markup: {
+      keyboard: [
+        ['📊 Графік', '⏱ Таймер'],
+        ['📈 Статистика', '❓ Допомога'],
+        ['⚙️ Налаштування'],
+      ],
+      resize_keyboard: true,
+      persistent: true,
+    },
+  };
+}
 
-### 🖼️ UI/UX Improvements (5/5)
-1. ✅ Main menu with 2-row layout: [📊 Графік] [⏱ Таймер] / [📈 Статистика] [❓ Допомога] / [⚙️ Налаштування]
-2. ✅ Abbreviations everywhere: ✅/❌ instead of "увімкнено/вимкнено"
-3. ✅ Friendly messages: "Обери опцію" instead of "Оберіть опцію"
-4. ✅ IP wait cancellation when navigating away
-5. ✅ Consistent emoji usage (🪫 for outages, 🆕 for new events)
+// After (Inline Keyboard)
+function getMainMenu() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [
+          { text: '📊 Графік', callback_data: 'menu_schedule' },
+          { text: '⏱ Таймер', callback_data: 'menu_timer' }
+        ],
+        [
+          { text: '📈 Статистика', callback_data: 'menu_stats' },
+          { text: '❓ Допомога', callback_data: 'menu_help' }
+        ],
+        [
+          { text: '⚙️ Налаштування', callback_data: 'menu_settings' }
+        ],
+      ],
+    },
+  };
+}
+```
 
-### 📢 Channel Updates (3/3)
-1. ✅ Clean notification format with emoji
-2. ✅ Schedule format with 🪫 and 🆕 markers
-3. ✅ First publication message:
-   ```
-   👋 Канал підключено до СвітлоЧек!
-   
-   Тут будуть з'являтись:
-   • 📊 Графіки відключень
-   • ⚡ Сповіщення про світло
-   
-   Черга: 3.1
-   ```
+### 3. Callback Handler Implementation
+**File:** `src/bot.js`
+- **Added Imports:**
+  - `getSettingsKeyboard` from './keyboards/inline'
+  - `REGIONS` from './constants/regions'
 
-### ❓ Help and Support (4/4)
-1. ✅ Updated "How to use" guide
-2. ✅ Updated FAQ with helpful information
-3. ✅ Developer contact: @th3ivn
-4. ✅ Welcome message matches new brand
+- **New Callback Handlers:**
+  - `menu_schedule` - Shows schedule with graph
+  - `menu_timer` - Shows timer for next event
+  - `menu_stats` - Opens statistics menu
+  - `menu_help` - Opens help menu
+  - `menu_settings` - Opens settings with user info
+  - `back_to_main` - Returns to main menu
 
-### 🗑️ Data Management (3/3)
-1. ✅ "Видалити мої дані" button in settings
-2. ✅ Confirmation dialog with warning
-3. ✅ After-deletion farewell message:
-   ```
-   👋 Сумно, але ок!
-   
-   Всі твої дані видалено. Канал відключено.
-   
-   Якщо захочеш повернутись - просто напиши /start
-   
-   Бувай! 🤖
-   ```
+### 4. Code Cleanup
+**File:** `src/bot.js`
+- **Removed:** Old text message handlers for menu buttons
+- **Simplified:** Message handler now only processes IP setup and channel conversations
+- **Routing Fix:** Moved `back_to_main` out of settings callbacks to dedicated handler
 
-### 📊 Statistics and Messages (2/2)
-1. ✅ Friendly error messages
-2. ✅ Abbreviations in all user-facing text
+## 🧪 Testing
 
-### 🔧 Quality Assurance (2/2)
-1. ✅ Code review completed - all feedback addressed
-2. ✅ Security scan completed - 0 vulnerabilities found
+Created comprehensive test suite: `test-inline-keyboard-fix.js`
 
-## 📝 Implementation Details
+**Test Coverage:**
+1. ✅ QUEUES import verification
+2. ✅ getMainMenu() returns inline keyboard
+3. ✅ Correct callback_data values
+4. ✅ All callback handlers exist in bot.js
+5. ✅ Old text handlers removed
+6. ✅ back_to_main routing is correct
 
-### Files Modified (13)
-- `src/bot.js` - Fixed callback routing, added IP handler
-- `src/config.js` - Added ownerId
-- `src/constants/regions.js` - Updated region names
-- `src/formatter.js` - Updated welcome message, bot name
-- `src/handlers/admin.js` - Updated queue display format
-- `src/handlers/channel.js` - Updated branding, first publication
-- `src/handlers/settings.js` - Added IP handler, delete data, abbreviations
-- `src/handlers/start.js` - Simplified queue selection, updated messages
-- `src/keyboards/inline.js` - Updated main menu, added delete keyboard
-- `src/index.js` - Updated startup message
-- `src/api.js` - Updated user-agent
-- `package.json` - Updated name and description
-- `README.md` - Updated regions
+**Test Results:**
+```
+✅✅✅ All tests passed! ✅✅✅
+```
 
-### Key Technical Changes
-1. **Queue Selection Flow**: region → queue (direct) → confirm (removed group step)
-2. **Callback Routing**: Fixed `confirm_` prefix conflict
-3. **IP Validation**: Regex constant `IP_REGEX` with proper octet range validation
-4. **State Management**: IP setup states with timeout cleanup
-5. **Database**: Uses existing GPV format internally for API compatibility
+## 🔒 Security
 
-## ⚠️ Not Implemented (Non-Critical Features)
-The following features from the original spec were marked as non-critical or already existed:
-- Bot modes (Active/No channel/Pause) - requires additional database fields
-- Channel name protection - requires background monitoring
-- Typing indicator - minimal UX improvement
-- Pause reminders at 09:00 - requires additional cron job
-- Inline editing for all messages - some already use editMessageText
-- Popup timer/statistics buttons - already implemented
+- ✅ CodeQL Security Analysis: 0 vulnerabilities found
+- ✅ No syntax errors
+- ✅ No security issues introduced
 
-## 🎯 Result
-All critical requirements successfully implemented. Bot is fully rebranded to "СвітлоЧек" with friendly Ukrainian interface, all bugs fixed, and code quality verified.
+## 📊 Impact Summary
+
+**Files Changed:** 3
+- `src/keyboards/inline.js` - Bug fix and UI enhancement
+- `src/bot.js` - Callback handlers and cleanup
+- `test-inline-keyboard-fix.js` - Comprehensive test suite
+
+**Lines Changed:**
+- +241 additions
+- -75 deletions
+- Net: +166 lines
+
+**User Experience:**
+- ✅ Queue selection now works (QUEUES bug fixed)
+- ✅ Better UI with inline buttons
+- ✅ Consistent navigation with message editing
+- ✅ All menu functions accessible
+
+## 🎯 Expected Results
+
+1. ✅ "QUEUES is not defined" error is fixed
+2. ✅ Main menu displays as inline keyboard
+3. ✅ All menu buttons work via inline callbacks
+4. ✅ Navigation edits messages instead of sending new ones
+5. ✅ Back button returns to main menu
+6. ✅ All functionality preserved
+
+## 📝 Notes
+
+- Pre-existing test failure in test.js (formatter test) is unrelated to these changes
+- The synthetic message object `{ ...query.message, from: query.from }` correctly provides all required properties (`chat.id` and `from.id`) for the handlers
+- No breaking changes - all existing functionality is preserved
