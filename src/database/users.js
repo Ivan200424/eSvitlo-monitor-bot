@@ -215,8 +215,30 @@ function getUserStats() {
 
 // Видалити користувача
 function deleteUser(telegramId) {
-  const stmt = db.prepare('DELETE FROM users WHERE telegram_id = ?');
-  const result = stmt.run(telegramId);
+  // First, get the user's internal ID
+  const user = getUserByTelegramId(telegramId);
+  if (!user) {
+    return false;
+  }
+  
+  const userId = user.id;
+  
+  // Delete all related records first to avoid FOREIGN KEY constraint failure
+  // Delete from outage_history
+  const deleteOutageStmt = db.prepare('DELETE FROM outage_history WHERE user_id = ?');
+  deleteOutageStmt.run(userId);
+  
+  // Delete from power_history
+  const deletePowerStmt = db.prepare('DELETE FROM power_history WHERE user_id = ?');
+  deletePowerStmt.run(userId);
+  
+  // Delete from schedule_history
+  const deleteScheduleStmt = db.prepare('DELETE FROM schedule_history WHERE user_id = ?');
+  deleteScheduleStmt.run(userId);
+  
+  // Finally, delete the user
+  const deleteUserStmt = db.prepare('DELETE FROM users WHERE telegram_id = ?');
+  const result = deleteUserStmt.run(telegramId);
   return result.changes > 0;
 }
 

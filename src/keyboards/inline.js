@@ -232,12 +232,18 @@ function getHelpKeyboard() {
 }
 
 // Канал меню
-function getChannelMenuKeyboard(channelUsername = null, isPublic = false) {
+function getChannelMenuKeyboard(channelUsername = null, isPublic = false, channelStatus = 'active') {
   const buttons = [
     [{ text: 'ℹ️ Інфо про канал', callback_data: 'channel_info' }],
     [{ text: '✏️ Змінити канал', callback_data: 'channel_change' }],
-    [{ text: '🔕 Вимкнути публікацію', callback_data: 'channel_disable' }],
   ];
+  
+  // Add reconnect button if channel is blocked
+  if (channelStatus === 'blocked') {
+    buttons.push([{ text: '⚙️ Перепідключити канал', callback_data: 'channel_reconnect' }]);
+  } else {
+    buttons.push([{ text: '🔕 Вимкнути публікацію', callback_data: 'channel_disable' }]);
+  }
   
   // Add "Open channel" button for public channels
   if (isPublic && channelUsername) {
