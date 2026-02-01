@@ -649,7 +649,15 @@ async function handleSettingsCallback(bot, query) {
     if (data.startsWith('notify_target_')) {
       const target = data.replace('notify_target_', '');
       if (['bot', 'channel', 'both'].includes(target)) {
-        usersDb.updateUserPowerNotifyTarget(telegramId, target);
+        const success = usersDb.updateUserPowerNotifyTarget(telegramId, target);
+        
+        if (!success) {
+          await bot.answerCallbackQuery(query.id, {
+            text: '❌ Помилка оновлення налаштування',
+            show_alert: true
+          });
+          return;
+        }
         
         const targetLabels = {
           'bot': '📱 Тільки в бот',
