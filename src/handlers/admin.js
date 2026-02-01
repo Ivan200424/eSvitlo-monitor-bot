@@ -247,15 +247,14 @@ async function handleAdminCallback(bot, query) {
         return;
       }
       
-      let message = '👥 <b>Останні 10 користувачів:</b>\n\n';
+      let message = '👥 <b>Останні користувачі:</b>\n\n';
       
       users.forEach((user, index) => {
         const regionName = REGIONS[user.region]?.name || user.region;
-        const status = user.is_active ? '✅' : '❌';
-        const channel = user.channel_id ? '📺' : '';
+        const channelIcon = user.channel_id ? ' 📺' : '';
+        const ipIcon = user.router_ip ? ' 📡' : '';
         
-        message += `${index + 1}. ${status} @${user.username || 'без username'}\n`;
-        message += `   ${regionName}, Черга ${user.queue} ${channel}\n\n`;
+        message += `${index + 1}. @${user.username || 'без username'} • ${regionName} ${user.queue}${channelIcon}${ipIcon}\n`;
       });
       
       await bot.editMessageText(message, {
@@ -321,7 +320,7 @@ async function handleAdminCallback(bot, query) {
     // Admin menu callback (back from intervals)
     if (data === 'admin_menu') {
       await bot.editMessageText(
-        '👨‍💼 <b>Адмін панель</b>\n\nОберіть опцію:',
+        '🔧 <b>Адмін-панель</b>',
         {
           chat_id: chatId,
           message_id: query.message.message_id,

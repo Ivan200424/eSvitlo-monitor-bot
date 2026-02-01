@@ -97,7 +97,97 @@ bot.on('callback_query', async (query) => {
     
     // Menu callbacks
     if (data === 'menu_schedule') {
-      await handleSchedule(bot, { ...query.message, from: query.from });
+      try {
+        const usersDb = require('./database/users');
+        const { fetchScheduleData, fetchScheduleImage } = require('./api');
+        const { parseScheduleForQueue, findNextEvent } = require('./parser');
+        const { formatScheduleMessage } = require('./formatter');
+        
+        const telegramId = String(query.from.id);
+        const user = usersDb.getUserByTelegramId(telegramId);
+        
+        if (!user) {
+          await bot.answerCallbackQuery(query.id, {
+            text: '❌ Користувач не знайдений',
+            show_alert: true
+          });
+          return;
+        }
+        
+        // Get schedule data
+        const data = await fetchScheduleData(user.region);
+        const scheduleData = parseScheduleForQueue(data, user.queue);
+        const nextEvent = findNextEvent(scheduleData);
+        
+        // Check if data exists
+        if (!scheduleData || !scheduleData.events || scheduleData.events.length === 0) {
+          await bot.editMessageText(
+            '📊 <b>Графік</b>\n\n' +
+            'ℹ️ Дані ще не опубліковані.\n' +
+            'Спробуйте пізніше.',
+            {
+              chat_id: query.message.chat.id,
+              message_id: query.message.message_id,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '⤴︎ Меню', callback_data: 'back_to_main' }]
+                ]
+              }
+            }
+          );
+          await bot.answerCallbackQuery(query.id);
+          return;
+        }
+        
+        // Format message
+        const message = formatScheduleMessage(user.region, user.queue, scheduleData, nextEvent);
+        
+        // Try to get and send image with edit
+        try {
+          const imageBuffer = await fetchScheduleImage(user.region, user.queue);
+          
+          // Delete the old message and send new one with photo
+          await bot.deleteMessage(query.message.chat.id, query.message.message_id);
+          await bot.sendPhoto(query.message.chat.id, imageBuffer, {
+            caption: message,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '⏱ Таймер', callback_data: 'menu_timer' },
+                  { text: '⤴︎ Меню', callback_data: 'back_to_main' }
+                ]
+              ]
+            }
+          }, { filename: 'schedule.png', contentType: 'image/png' });
+        } catch (imgError) {
+          // If image unavailable, just edit text
+          console.log('Schedule image unavailable:', imgError.message);
+          await bot.editMessageText(
+            message,
+            {
+              chat_id: query.message.chat.id,
+              message_id: query.message.message_id,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: '⏱ Таймер', callback_data: 'menu_timer' },
+                    { text: '⤴︎ Меню', callback_data: 'back_to_main' }
+                  ]
+                ]
+              }
+            }
+          );
+        }
+      } catch (error) {
+        console.error('Помилка отримання графіка:', error);
+        await bot.answerCallbackQuery(query.id, {
+          text: '😅 Щось пішло не так. Спробуй ще раз!',
+          show_alert: true
+        });
+      }
       await bot.answerCallbackQuery(query.id);
       return;
     }
@@ -206,27 +296,22 @@ bot.on('callback_query', async (query) => {
       const isAdmin = config.adminIds.includes(telegramId) || telegramId === config.ownerId;
       const region = REGIONS[user.region]?.name || user.region;
       
-      // Determine bot status
-      let botStatusIcon = '🟢';
-      let botStatusText = 'Активний';
-      if (!user.channel_id) {
-        botStatusIcon = '🟡';
-        botStatusText = 'Без каналу';
-      } else if (!user.is_active) {
-        botStatusIcon = '🔴';
-        botStatusText = 'Пауза';
-      }
+      // Build settings message according to new format
+      let message = '⚙️ <b>Налаштування</b>\n\n';
+      message += 'Поточні параметри:\n\n';
+      message += `📍 Регіон: ${region} • ${user.queue}\n`;
+      message += `📺 Канал: ${user.channel_id ? user.channel_id + ' ✅' : 'не підключено'}\n`;
+      message += `📡 IP: ${user.router_ip ? user.router_ip + ' ✅' : 'не підключено'}\n`;
+      message += `🔔 Сповіщення: ${user.is_active ? 'увімкнено ✅' : 'вимкнено'}\n\n`;
+      message += '⸻\n\n';
+      message += 'Керування:\n';
+      
+      // Include keyboard - will be appended after message
+      // Add separator before dangerous action (in the keyboard layout)
+      // Note: We can't add text in keyboard, so we add it in message if needed
       
       await bot.editMessageText(
-        `⚙️ <b>Налаштування</b>\n\n` +
-        `📍 Регіон: ${region}\n` +
-        `⚡ Черга: ${user.queue}\n` +
-        `📺 Канал: ${user.channel_id ? '✅ ' + user.channel_id : '❌ Не підключено'}\n` +
-        `🌐 IP: ${user.router_ip ? '✅ ' + user.router_ip : '❌ Не налаштовано'}\n` +
-        `🔔 Сповіщення: ${user.is_active ? '✅ Увімкнено' : '❌ Вимкнено'}\n` +
-        `🤖 Статус: ${botStatusIcon} ${botStatusText}\n\n` +
-        `ℹ️ Керуйте регіоном і чергою,\n` +
-        `сповіщеннями, IP-моніторингом та каналом.`,
+        message,
         {
           chat_id: query.message.chat.id,
           message_id: query.message.message_id,
@@ -254,14 +339,18 @@ bot.on('callback_query', async (query) => {
           botStatus = 'paused';
         }
         
+        // Build main menu message (without development notice when editing message)
+        let message = '🏠 <b>Головне меню</b>\n\n';
+        message += `📍 Регіон: ${region} • ${user.queue}\n`;
+        message += `📺 Канал: ${user.channel_id ? user.channel_id + ' ✅' : 'не підключено'}\n`;
+        message += `🔔 Сповіщення: ${user.is_active ? 'увімкнено ✅' : 'вимкнено'}\n`;
+        
         await bot.editMessageText(
-          `👋 Привіт! Я СвітлоЧек 🤖\n\n` +
-          `📍 ${region} | Черга ${user.queue}\n` +
-          `🔔 Сповіщення: ${user.is_active ? '✅' : '❌'}\n\n` +
-          `Використовуй меню нижче:`,
+          message,
           {
             chat_id: query.message.chat.id,
             message_id: query.message.message_id,
+            parse_mode: 'HTML',
             reply_markup: getMainMenu(botStatus).reply_markup,
           }
         );
@@ -603,10 +692,28 @@ bot.on('callback_query', async (query) => {
     
     // Help callbacks
     if (data === 'help_howto') {
-      await bot.answerCallbackQuery(query.id, {
-        text: help_howto,
-        show_alert: true
-      });
+      await bot.editMessageText(
+        '📖 <b>Як користуватися ботом:</b>\n\n' +
+        '1. Оберіть регіон і чергу\n' +
+        '2. Увімкніть сповіщення\n' +
+        '3. (Опціонально) Підключіть канал\n' +
+        '4. (Опціонально) Налаштуйте IP моніторинг\n\n' +
+        'Бот автоматично сповістить про:\n' +
+        '• Зміни в графіку\n' +
+        '• Фактичні відключення (з IP)',
+        {
+          chat_id: query.message.chat.id,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [{ text: '← Назад', callback_data: 'menu_help' }],
+              [{ text: '⤴︎ Меню', callback_data: 'back_to_main' }]
+            ]
+          }
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
       return;
     }
     
@@ -615,40 +722,6 @@ bot.on('callback_query', async (query) => {
         text: help_faq,
         show_alert: true
       });
-      return;
-    }
-    
-    // Statistics callbacks
-    if (data.startsWith('stats_')) {
-      const usersDb = require('./database/users');
-      const { getWeeklyStats, formatStatsPopup } = require('./statistics');
-      
-      try {
-        const telegramId = String(query.from.id);
-        const user = usersDb.getUserByTelegramId(telegramId);
-        
-        if (!user) {
-          await bot.answerCallbackQuery(query.id, {
-            text: '❌ Користувач не знайдений',
-            show_alert: true
-          });
-          return;
-        }
-        
-        const stats = getWeeklyStats(user.id);
-        const message = formatStatsPopup(stats);
-        
-        await bot.answerCallbackQuery(query.id, {
-          text: message,
-          show_alert: true
-        });
-      } catch (error) {
-        console.error('Помилка отримання статистики:', error);
-        await bot.answerCallbackQuery(query.id, {
-          text: '❌ Помилка отримання статистики',
-          show_alert: true
-        });
-      }
       return;
     }
     
