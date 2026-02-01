@@ -10,7 +10,7 @@ async function handleAdmin(bot, msg) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }
@@ -35,7 +35,7 @@ async function handleStats(bot, msg) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }
@@ -69,7 +69,7 @@ async function handleUsers(bot, msg) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }
@@ -107,7 +107,7 @@ async function handleBroadcast(bot, msg) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }
@@ -169,7 +169,7 @@ async function handleSystem(bot, msg) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }
@@ -207,7 +207,7 @@ async function handleAdminCallback(bot, query) {
   const userId = String(query.from.id);
   const data = query.data;
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.answerCallbackQuery(query.id, { text: '❌ Немає прав' });
     return;
   }
@@ -305,7 +305,7 @@ async function handleSetInterval(bot, msg, match) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }
@@ -375,7 +375,7 @@ async function handleSetDebounce(bot, msg, match) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }
@@ -420,7 +420,7 @@ async function handleGetDebounce(bot, msg) {
   const chatId = msg.chat.id;
   const userId = String(msg.from.id);
   
-  if (!isAdmin(userId, config.adminIds)) {
+  if (!isAdmin(userId, config.adminIds, config.ownerId)) {
     await bot.sendMessage(chatId, '❌ У вас немає прав адміністратора.');
     return;
   }

@@ -23,7 +23,7 @@ async function handleSettings(bot, msg) {
       return;
     }
     
-    const isAdmin = config.adminIds.includes(telegramId);
+    const isAdmin = config.adminIds.includes(telegramId) || telegramId === config.ownerId;
     const region = REGIONS[user.region]?.name || user.region;
     const message = 
       `⚙️ <b>Налаштування</b>\n\n` +
@@ -397,19 +397,53 @@ async function handleSettingsCallback(bot, query) {
         channelName = channelName.substring(0, 20) + '...';
       }
       
+      const channelStatus = user.channel_status || 'active';
+      const statusText = channelStatus === 'blocked' ? '🔴 Заблокований' : '🟢 Активний';
+      
       const message = 
         `📺 <b>Налаштування каналу</b>\n\n` +
-        `Поточний: ${channelName}\n\n` +
+        `Поточний: ${channelName}\n` +
+        (user.channel_id ? `Статус: ${statusText}\n\n` : '\n') +
         (isPublic ? '' : user.channel_id ? 'Канал приватний\n\n' : '') +
+        (channelStatus === 'blocked' ? '⚠️ Канал заблокований через зміну назви/опису/фото.\nВикористайте "Перепідключити канал" для відновлення.\n\n' : '') +
         'Оберіть опцію:';
       
       await bot.editMessageText(message, {
         chat_id: chatId,
         message_id: query.message.message_id,
         parse_mode: 'HTML',
-        reply_markup: getChannelMenuKeyboard(user.channel_id, isPublic).reply_markup,
+        reply_markup: getChannelMenuKeyboard(user.channel_id, isPublic, channelStatus).reply_markup,
       });
       await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Channel reconnect
+    if (data === 'channel_reconnect') {
+      if (!user.channel_id) {
+        await bot.answerCallbackQuery(query.id, { 
+          text: '❌ Канал не підключено',
+          show_alert: true 
+        });
+        return;
+      }
+      
+      // Reset channel status to active
+      usersDb.updateChannelStatus(telegramId, 'active');
+      
+      await bot.editMessageText(
+        '✅ <b>Канал розблоковано!</b>\n\n' +
+        'Статус каналу змінено на "Активний".\n\n' +
+        '⚠️ <b>Важливо:</b> Не змінюйте назву, опис або фото каналу в майбутньому, ' +
+        'інакше канал буде знову заблоковано.\n\n' +
+        'Публікації в канал відновлено.',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+        }
+      );
+      await bot.answerCallbackQuery(query.id, { text: '✅ Канал розблоковано' });
       return;
     }
     
@@ -442,7 +476,7 @@ async function handleSettingsCallback(bot, query) {
     
     // Admin panel
     if (data === 'settings_admin') {
-      const isAdmin = config.adminIds.includes(telegramId);
+      const isAdmin = config.adminIds.includes(telegramId) || telegramId === config.ownerId;
       if (!isAdmin) {
         await bot.answerCallbackQuery(query.id, { text: '❌ Доступ заборонено' });
         return;
@@ -458,7 +492,7 @@ async function handleSettingsCallback(bot, query) {
     // Назад до налаштувань
     if (data === 'back_to_settings') {
       const updatedUser = usersDb.getUserByTelegramId(telegramId);
-      const isAdmin = config.adminIds.includes(telegramId);
+      const isAdmin = config.adminIds.includes(telegramId) || telegramId === config.ownerId;
       const region = REGIONS[updatedUser.region]?.name || updatedUser.region;
       const message = 
         `⚙️ <b>Налаштування</b>\n\n` +
