@@ -2,6 +2,7 @@ const config = require('./config');
 const usersDb = require('./database/users');
 const { addOutageRecord } = require('./statistics');
 const { formatExactDuration, formatTime, formatInterval } = require('./utils');
+const { formatTemplate } = require('./formatter');
 
 let bot = null;
 let monitoringInterval = null;
@@ -170,13 +171,23 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
     let message = '';
     const kyivTime = new Date(originalChangeTime.toLocaleString('en-US', { timeZone: 'Europe/Kyiv' }));
     const timeStr = `${String(kyivTime.getHours()).padStart(2, '0')}:${String(kyivTime.getMinutes()).padStart(2, '0')}`;
+    const dateStr = `${String(kyivTime.getDate()).padStart(2, '0')}.${String(kyivTime.getMonth() + 1).padStart(2, '0')}.${kyivTime.getFullYear()}`;
     
     if (newState === 'off') {
-      // Світло зникло
-      message = `🔴 Світла немає\n\n`;
-      message += `🕐 Час: ${timeStr}`;
-      if (durationText) {
-        message += `\n⏱ Було: ${durationText}`;
+      // Світло зникло - use custom template if available
+      if (user.power_off_text) {
+        message = formatTemplate(user.power_off_text, {
+          time: timeStr,
+          date: dateStr,
+          duration: durationText || ''
+        });
+      } else {
+        // Default message
+        message = `🔴 Світла немає\n\n`;
+        message += `🕐 Час: ${timeStr}`;
+        if (durationText) {
+          message += `\n⏱ Було: ${durationText}`;
+        }
       }
       
       // Якщо є попередній стан 'on', зберігаємо запис про відключення
@@ -184,11 +195,20 @@ async function handlePowerStateChange(user, newState, oldState, userState) {
         addOutageRecord(user.id, userState.lastStableAt, changedAt);
       }
     } else {
-      // Світло з'явилося
-      message = `🟢 Світло є\n\n`;
-      message += `🕐 Час: ${timeStr}`;
-      if (durationText) {
-        message += `\n⏱ Не було: ${durationText}`;
+      // Світло з'явилося - use custom template if available
+      if (user.power_on_text) {
+        message = formatTemplate(user.power_on_text, {
+          time: timeStr,
+          date: dateStr,
+          duration: durationText || ''
+        });
+      } else {
+        // Default message
+        message = `🟢 Світло є\n\n`;
+        message += `🕐 Час: ${timeStr}`;
+        if (durationText) {
+          message += `\n⏱ Не було: ${durationText}`;
+        }
       }
     }
     

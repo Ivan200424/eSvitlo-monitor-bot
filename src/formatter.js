@@ -370,6 +370,35 @@ function formatScheduleChanges(changes) {
   return lines.join('\n');
 }
 
+// Форматувати шаблон з підставленням змінних
+function formatTemplate(template, variables) {
+  if (!template) return '';
+  
+  let result = template;
+  
+  // Заміна змінних - use simple string replace for better performance
+  for (const [key, value] of Object.entries(variables)) {
+    const placeholder = `{${key}}`;
+    while (result.includes(placeholder)) {
+      result = result.replace(placeholder, value || '');
+    }
+  }
+  
+  // Заміна <br> на новий рядок
+  result = result.replace(/<br>/g, '\n');
+  
+  return result;
+}
+
+// Форматувати поточну дату/час для шаблонів
+function getCurrentDateTimeForTemplate() {
+  const now = new Date();
+  return {
+    timeStr: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+    dateStr: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`
+  };
+}
+
 module.exports = {
   formatScheduleMessage,
   formatNextEventMessage,
@@ -382,4 +411,6 @@ module.exports = {
   formatScheduleForChannel,
   formatStatsForChannelPopup,
   formatScheduleChanges,
+  formatTemplate,
+  getCurrentDateTimeForTemplate,
 };
