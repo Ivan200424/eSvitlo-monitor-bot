@@ -189,7 +189,7 @@ async function handleConversation(bot, msg) {
       
       const MAX_TITLE_LENGTH = 128;
       if (text.length > MAX_TITLE_LENGTH) {
-        await bot.sendMessage(chatId, `❌ Назва занадто довга (максимум ${MAX_TITLE_LENGTH} символів).\n\nЗалишилось: ${MAX_TITLE_LENGTH - text.length} символів\n\nСпробуйте ще раз:`);
+        await bot.sendMessage(chatId, `❌ Назва занадто довга (максимум ${MAX_TITLE_LENGTH} символів).\n\nПеревищено на: ${text.length - MAX_TITLE_LENGTH} символів\n\nСпробуйте ще раз:`);
         return true;
       }
       
@@ -226,7 +226,7 @@ async function handleConversation(bot, msg) {
       
       const MAX_DESC_LENGTH = 255;
       if (text.length > MAX_DESC_LENGTH) {
-        await bot.sendMessage(chatId, `❌ Опис занадто довгий (максимум ${MAX_DESC_LENGTH} символів).\n\nЗалишилось: ${MAX_DESC_LENGTH - text.length} символів\n\nСпробуйте ще раз:`);
+        await bot.sendMessage(chatId, `❌ Опис занадто довгий (максимум ${MAX_DESC_LENGTH} символів).\n\nПеревищено на: ${text.length - MAX_DESC_LENGTH} символів\n\nСпробуйте ще раз:`);
         return true;
       }
       
@@ -245,7 +245,7 @@ async function handleConversation(bot, msg) {
       
       const MAX_TITLE_LENGTH = 128;
       if (text.length > MAX_TITLE_LENGTH) {
-        await bot.sendMessage(chatId, `❌ Назва занадто довга (максимум ${MAX_TITLE_LENGTH} символів).\n\nЗалишилось: ${MAX_TITLE_LENGTH - text.length} символів\n\nСпробуйте ще раз:`);
+        await bot.sendMessage(chatId, `❌ Назва занадто довга (максимум ${MAX_TITLE_LENGTH} символів).\n\nПеревищено на: ${text.length - MAX_TITLE_LENGTH} символів\n\nСпробуйте ще раз:`);
         return true;
       }
       
@@ -293,7 +293,7 @@ async function handleConversation(bot, msg) {
       
       const MAX_DESC_LENGTH = 255;
       if (text.length > MAX_DESC_LENGTH) {
-        await bot.sendMessage(chatId, `❌ Опис занадто довгий (максимум ${MAX_DESC_LENGTH} символів).\n\nЗалишилось: ${MAX_DESC_LENGTH - text.length} символів\n\nСпробуйте ще раз:`);
+        await bot.sendMessage(chatId, `❌ Опис занадто довгий (максимум ${MAX_DESC_LENGTH} символів).\n\nПеревищено на: ${text.length - MAX_DESC_LENGTH} символів\n\nСпробуйте ще раз:`);
         return true;
       }
       

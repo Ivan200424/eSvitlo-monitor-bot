@@ -328,6 +328,12 @@ bot.on('callback_query', async (query) => {
           
           // Check channel permissions
           try {
+            // Ensure bot.options.id is set
+            if (!bot.options.id) {
+              const botInfo = await bot.getMe();
+              bot.options.id = botInfo.id;
+            }
+            
             const botMember = await bot.getChatMember(channelId, bot.options.id);
             
             if (botMember.status !== 'administrator' || !botMember.can_post_messages || !botMember.can_change_info) {
