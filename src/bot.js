@@ -97,7 +97,97 @@ bot.on('callback_query', async (query) => {
     
     // Menu callbacks
     if (data === 'menu_schedule') {
-      await handleSchedule(bot, { ...query.message, from: query.from });
+      try {
+        const usersDb = require('./database/users');
+        const { fetchScheduleData, fetchScheduleImage } = require('./api');
+        const { parseScheduleForQueue, findNextEvent } = require('./parser');
+        const { formatScheduleMessage } = require('./formatter');
+        
+        const telegramId = String(query.from.id);
+        const user = usersDb.getUserByTelegramId(telegramId);
+        
+        if (!user) {
+          await bot.answerCallbackQuery(query.id, {
+            text: '❌ Користувач не знайдений',
+            show_alert: true
+          });
+          return;
+        }
+        
+        // Get schedule data
+        const data = await fetchScheduleData(user.region);
+        const scheduleData = parseScheduleForQueue(data, user.queue);
+        const nextEvent = findNextEvent(scheduleData);
+        
+        // Check if data exists
+        if (!scheduleData || !scheduleData.events || scheduleData.events.length === 0) {
+          await bot.editMessageText(
+            '📊 <b>Графік</b>\n\n' +
+            'ℹ️ Дані ще не опубліковані.\n' +
+            'Спробуйте пізніше.',
+            {
+              chat_id: query.message.chat.id,
+              message_id: query.message.message_id,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [{ text: '⤴︎ Меню', callback_data: 'back_to_main' }]
+                ]
+              }
+            }
+          );
+          await bot.answerCallbackQuery(query.id);
+          return;
+        }
+        
+        // Format message
+        const message = formatScheduleMessage(user.region, user.queue, scheduleData, nextEvent);
+        
+        // Try to get and send image with edit
+        try {
+          const imageBuffer = await fetchScheduleImage(user.region, user.queue);
+          
+          // Delete the old message and send new one with photo
+          await bot.deleteMessage(query.message.chat.id, query.message.message_id);
+          await bot.sendPhoto(query.message.chat.id, imageBuffer, {
+            caption: message,
+            parse_mode: 'HTML',
+            reply_markup: {
+              inline_keyboard: [
+                [
+                  { text: '⏱ Таймер', callback_data: 'menu_timer' },
+                  { text: '⤴︎ Меню', callback_data: 'back_to_main' }
+                ]
+              ]
+            }
+          }, { filename: 'schedule.png', contentType: 'image/png' });
+        } catch (imgError) {
+          // If image unavailable, just edit text
+          console.log('Schedule image unavailable:', imgError.message);
+          await bot.editMessageText(
+            message,
+            {
+              chat_id: query.message.chat.id,
+              message_id: query.message.message_id,
+              parse_mode: 'HTML',
+              reply_markup: {
+                inline_keyboard: [
+                  [
+                    { text: '⏱ Таймер', callback_data: 'menu_timer' },
+                    { text: '⤴︎ Меню', callback_data: 'back_to_main' }
+                  ]
+                ]
+              }
+            }
+          );
+        }
+      } catch (error) {
+        console.error('Помилка отримання графіка:', error);
+        await bot.answerCallbackQuery(query.id, {
+          text: '😅 Щось пішло не так. Спробуй ще раз!',
+          show_alert: true
+        });
+      }
       await bot.answerCallbackQuery(query.id);
       return;
     }
