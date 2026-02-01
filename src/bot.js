@@ -22,8 +22,9 @@ const {
   handleChannelCallback, 
   handleCancelChannel 
 } = require('./handlers/channel');
-const { getMainMenu, getHelpKeyboard, getStatisticsKeyboard, getSettingsKeyboard } = require('./keyboards/inline');
+const { getMainMenu, getHelpKeyboard, getStatisticsKeyboard, getSettingsKeyboard, getErrorKeyboard } = require('./keyboards/inline');
 const { REGIONS } = require('./constants/regions');
+const { formatErrorMessage } = require('./formatter');
 
 // Store pending channel connections
 const pendingChannels = new Map();
@@ -183,9 +184,6 @@ bot.on('callback_query', async (query) => {
         }
       } catch (error) {
         console.error('Помилка отримання графіка:', error);
-        
-        const { formatErrorMessage } = require('./formatter');
-        const { getErrorKeyboard } = require('./keyboards/inline');
         
         await bot.editMessageText(
           formatErrorMessage(),

@@ -1,6 +1,6 @@
 const usersDb = require('../database/users');
-const { formatWelcomeMessage } = require('../formatter');
-const { getRegionKeyboard, getMainMenu, getQueueKeyboard, getConfirmKeyboard } = require('../keyboards/inline');
+const { formatWelcomeMessage, formatErrorMessage } = require('../formatter');
+const { getRegionKeyboard, getMainMenu, getQueueKeyboard, getConfirmKeyboard, getErrorKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
 
 // Стан wizard для кожного користувача
@@ -99,8 +99,6 @@ async function handleStart(bot, msg) {
     }
   } catch (error) {
     console.error('Помилка в handleStart:', error);
-    const { formatErrorMessage } = require('../formatter');
-    const { getErrorKeyboard } = require('../keyboards/inline');
     await bot.sendMessage(chatId, formatErrorMessage(), {
       parse_mode: 'HTML',
       ...getErrorKeyboard()

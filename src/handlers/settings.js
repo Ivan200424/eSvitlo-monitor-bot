@@ -1,9 +1,10 @@
 const usersDb = require('../database/users');
-const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getDeleteDataConfirmKeyboard, getDeleteDataFinalKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard } = require('../keyboards/inline');
+const { getSettingsKeyboard, getAlertsSettingsKeyboard, getAlertTimeKeyboard, getDeactivateConfirmKeyboard, getDeleteDataConfirmKeyboard, getDeleteDataFinalKeyboard, getIpMonitoringKeyboard, getIpCancelKeyboard, getChannelMenuKeyboard, getErrorKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
 const { startWizard } = require('./start');
 const { isAdmin } = require('../utils');
 const config = require('../config');
+const { formatErrorMessage } = require('../formatter');
 
 // Store IP setup conversation states
 const ipSetupStates = new Map();
@@ -42,8 +43,6 @@ async function handleSettings(bot, msg) {
     
   } catch (error) {
     console.error('Помилка в handleSettings:', error);
-    const { formatErrorMessage } = require('../formatter');
-    const { getErrorKeyboard } = require('../keyboards/inline');
     await bot.sendMessage(chatId, formatErrorMessage(), {
       parse_mode: 'HTML',
       ...getErrorKeyboard()
