@@ -47,15 +47,24 @@ app.use((req, res, next) => {
 // Apply rate limiting to API routes
 app.use('/api', apiLimiter);
 
+// Rate limiting for static files (more lenient)
+const staticLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 200, // Higher limit for static assets
+  message: { error: 'Занадто багато запитів, спробуйте пізніше' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 // API routes
 app.use('/api', authLimiter, settingsRouter);
 app.use('/api/admin', authLimiter, adminRouter);
 
-// Статичні файли webapp
-app.use(express.static(path.join(__dirname, '../webapp')));
+// Статичні файли webapp з rate limiting
+app.use(staticLimiter, express.static(path.join(__dirname, '../webapp')));
 
 // SPA fallback - всі інші запити повертають index.html
-app.get('*', (req, res) => {
+app.get('*', staticLimiter, (req, res) => {
   res.sendFile(path.join(__dirname, '../webapp/index.html'));
 });
 
