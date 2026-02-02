@@ -336,11 +336,19 @@ async function handleWizardCallback(bot, query) {
     if (data === 'wizard_notify_channel') {
       const username = query.from.username || query.from.first_name;
       
-      // Створюємо користувача з power_notify_target = 'channel'
-      // Note: Two separate calls used here to maintain backward compatibility with createUser
-      // TODO: Consider extending createUser to accept power_notify_target parameter
-      usersDb.createUser(telegramId, username, state.region, state.queue);
-      usersDb.updateUserPowerNotifyTarget(telegramId, 'channel');
+      // Перевіряємо чи користувач вже існує
+      const existingUser = usersDb.getUserByTelegramId(telegramId);
+      
+      if (existingUser) {
+        // Користувач вже існує - оновлюємо налаштування
+        usersDb.updateUserPowerNotifyTarget(telegramId, 'channel');
+      } else {
+        // Створюємо нового користувача з power_notify_target = 'channel'
+        // Note: Two separate calls used here to maintain backward compatibility with createUser
+        // TODO: Consider extending createUser to accept power_notify_target parameter
+        usersDb.createUser(telegramId, username, state.region, state.queue);
+        usersDb.updateUserPowerNotifyTarget(telegramId, 'channel');
+      }
       
       // Зберігаємо wizard state для обробки підключення каналу
       state.step = 'channel_setup';
@@ -386,21 +394,32 @@ async function handleWizardCallback(bot, query) {
         );
       } else {
         // Немає pending каналу - показати інструкції
+        // Отримуємо username бота для інструкції
+        let botUsername = 'цей_бот';
+        try {
+          const botInfo = await bot.getMe();
+          botUsername = `@${botInfo.username}`;
+        } catch (error) {
+          console.error('Помилка отримання інформації про бота:', error);
+        }
+        
         await bot.editMessageText(
-          `📺 <b>Підключення Telegram-каналу</b>\n\n` +
-          `Щоб бот міг публікувати у ваш канал:\n\n` +
-          `1️⃣ Створіть канал або відкрийте існуючий\n` +
-          `2️⃣ Додайте бота як адміністратора\n` +
-          `3️⃣ Надайте права на публікацію повідомлень\n` +
-          `4️⃣ Натисніть "🔄 Перевірити" нижче\n\n` +
-          `ℹ️ Це займе менше хвилини`,
+          `📺 <b>Підключення каналу</b>\n\n` +
+          `Щоб бот міг публікувати графіки у ваш канал:\n\n` +
+          `1️⃣ Відкрийте ваш канал у Telegram\n` +
+          `2️⃣ Перейдіть у Налаштування каналу → Адміністратори\n` +
+          `3️⃣ Натисніть "Додати адміністратора"\n` +
+          `4️⃣ Знайдіть бота: ${botUsername}\n` +
+          `5️⃣ Надайте права на публікацію повідомлень\n\n` +
+          `Після цього натисніть кнопку "✅ Перевірити" нижче.\n\n` +
+          `💡 <b>Порада:</b> скопіюйте ${botUsername} і вставте у пошук`,
           {
             chat_id: chatId,
             message_id: query.message.message_id,
             parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
-                [{ text: '🔄 Перевірити', callback_data: 'wizard_notify_channel' }],
+                [{ text: '✅ Перевірити', callback_data: 'wizard_notify_channel' }],
                 [{ text: '← Назад', callback_data: 'wizard_notify_back' }]
               ]
             }
