@@ -909,8 +909,7 @@ async function showScheduleAlertSettings(bot, chatId, messageId, user) {
   const keyboard = {
     inline_keyboard: [
       [
-        { text: enabled ? '❌ Вимкнути' : '❌ Вимкнено', callback_data: 'schedule_alert_off' },
-        { text: enabled ? '✅ Увімкнено' : '✅ Увімкнути', callback_data: 'schedule_alert_on' }
+        { text: enabled ? '✅ Увімкнено (натисни щоб вимкнути)' : '❌ Вимкнено (натисни щоб увімкнути)', callback_data: enabled ? 'schedule_alert_off' : 'schedule_alert_on' }
       ],
       timeOptions.map(t => ({
         text: t === minutes ? `✓ ${t} хв` : `${t} хв`,
