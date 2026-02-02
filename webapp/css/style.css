@@ -544,3 +544,38 @@ html {
   align-items: center;
   gap: 6px;
 }
+
+/* Section and Subsection Hints */
+.section-hint {
+  color: var(--tg-theme-hint-color, #999);
+  font-size: 14px;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+
+.subsection {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.subsection:last-child {
+  margin-bottom: 0;
+}
+
+.subsection-header {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.subsection-hint {
+  color: var(--tg-theme-hint-color, #999);
+  font-size: 13px;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}

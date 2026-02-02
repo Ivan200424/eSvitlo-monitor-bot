@@ -196,18 +196,25 @@ function populateForms() {
   // IP
   document.getElementById('router-ip').value = userData.router_ip || '';
   
-  // Alerts
+  // Schedule alerts (підсекція "Про зміни в графіку")
+  if (userData.schedule_alerts) {
+    document.getElementById('schedule-alert-enabled').checked = userData.schedule_alerts.schedule_alert_enabled;
+    document.getElementById('schedule-alert-target').value = userData.schedule_alerts.schedule_alert_target;
+  }
+  
+  // Alerts (підсекція "Нагадування перед відключенням")
   document.getElementById('alerts-off-enabled').checked = userData.alerts.alerts_off_enabled;
   document.getElementById('alerts-on-enabled').checked = userData.alerts.alerts_on_enabled;
   document.getElementById('notify-before-off').value = userData.alerts.notify_before_off;
   document.getElementById('notify-before-on').value = userData.alerts.notify_before_on;
   document.getElementById('notify-target').value = userData.alerts.notify_target;
   
-  // Schedule alerts
-  if (userData.schedule_alerts) {
-    document.getElementById('schedule-alert-enabled').checked = userData.schedule_alerts.schedule_alert_enabled;
-    document.getElementById('schedule-alert-minutes').value = userData.schedule_alerts.schedule_alert_minutes;
-    document.getElementById('schedule-alert-target').value = userData.schedule_alerts.schedule_alert_target;
+  // Power notify target (підсекція "Фактичний стан світла")
+  if (userData.power_notify_target) {
+    document.getElementById('power-notify-target').value = userData.power_notify_target;
+  } else {
+    // Default to 'both' if not set
+    document.getElementById('power-notify-target').value = 'both';
   }
 }
 
@@ -316,39 +323,33 @@ document.getElementById('delete-ip-btn').addEventListener('click', async () => {
   }
 });
 
-// Зберегти налаштування сповіщень
-document.getElementById('save-alerts-btn').addEventListener('click', async () => {
-  const data = {
-    alerts_off_enabled: document.getElementById('alerts-off-enabled').checked,
-    alerts_on_enabled: document.getElementById('alerts-on-enabled').checked,
-    notify_before_off: parseInt(document.getElementById('notify-before-off').value),
-    notify_before_on: parseInt(document.getElementById('notify-before-on').value),
-    notify_target: document.getElementById('notify-target').value,
-  };
-  
+// Зберегти всі налаштування сповіщень (об'єднана функція)
+document.getElementById('save-all-notifications-btn').addEventListener('click', async () => {
   try {
     tg.MainButton.showProgress();
-    await apiRequest('/api/user/alerts', 'POST', data);
-    showMessage('✅ Налаштування сповіщень оновлено');
-  } catch (error) {
-    showMessage(error.message, true);
-  } finally {
-    tg.MainButton.hideProgress();
-  }
-});
-
-// Зберегти налаштування попереджень про графік
-document.getElementById('save-schedule-alerts-btn').addEventListener('click', async () => {
-  const data = {
-    schedule_alert_enabled: document.getElementById('schedule-alert-enabled').checked,
-    schedule_alert_minutes: parseInt(document.getElementById('schedule-alert-minutes').value),
-    schedule_alert_target: document.getElementById('schedule-alert-target').value,
-  };
-  
-  try {
-    tg.MainButton.showProgress();
-    await apiRequest('/api/user/schedule-alerts', 'POST', data);
-    showMessage('✅ Налаштування попереджень оновлено');
+    
+    // Save schedule alerts (підсекція "Про зміни в графіку")
+    const scheduleData = {
+      schedule_alert_enabled: document.getElementById('schedule-alert-enabled').checked,
+      schedule_alert_target: document.getElementById('schedule-alert-target').value,
+    };
+    await apiRequest('/api/user/schedule-alerts', 'POST', scheduleData);
+    
+    // Save alerts (підсекція "Нагадування перед відключенням")
+    const alertsData = {
+      alerts_off_enabled: document.getElementById('alerts-off-enabled').checked,
+      alerts_on_enabled: document.getElementById('alerts-on-enabled').checked,
+      notify_before_off: parseInt(document.getElementById('notify-before-off').value),
+      notify_before_on: parseInt(document.getElementById('notify-before-on').value),
+      notify_target: document.getElementById('notify-target').value,
+    };
+    await apiRequest('/api/user/alerts', 'POST', alertsData);
+    
+    // Save power notify target (підсекція "Фактичний стан світла")
+    const powerNotifyTarget = document.getElementById('power-notify-target').value;
+    await apiRequest('/api/user/power-notify-target', 'POST', { power_notify_target: powerNotifyTarget });
+    
+    showMessage('✅ Всі налаштування сповіщень оновлено');
   } catch (error) {
     showMessage(error.message, true);
   } finally {
