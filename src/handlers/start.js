@@ -2,7 +2,7 @@ const usersDb = require('../database/users');
 const { formatWelcomeMessage, formatErrorMessage } = require('../formatter');
 const { getRegionKeyboard, getMainMenu, getQueueKeyboard, getConfirmKeyboard, getErrorKeyboard, getWizardNotifyTargetKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
-const { getBotUsername } = require('../utils');
+const { getBotUsername, getChannelConnectionInstructions } = require('../utils');
 
 // Constants imported from channel.js for consistency
 const PENDING_CHANNEL_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes
@@ -418,15 +418,7 @@ async function handleWizardCallback(bot, query) {
         const botUsername = await getBotUsername(bot);
         
         await bot.editMessageText(
-          `📺 <b>Підключення каналу</b>\n\n` +
-          `Щоб бот міг публікувати графіки у ваш канал:\n\n` +
-          `1️⃣ Відкрийте ваш канал у Telegram\n` +
-          `2️⃣ Перейдіть у Налаштування каналу → Адміністратори\n` +
-          `3️⃣ Натисніть "Додати адміністратора"\n` +
-          `4️⃣ Знайдіть бота: ${botUsername}\n` +
-          `5️⃣ Надайте права на публікацію повідомлень\n\n` +
-          `Після цього натисніть кнопку "✅ Перевірити" нижче.\n\n` +
-          `💡 <b>Порада:</b> скопіюйте ${botUsername} і вставте у пошук`,
+          getChannelConnectionInstructions(botUsername),
           {
             chat_id: chatId,
             message_id: query.message.message_id,

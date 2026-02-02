@@ -1,7 +1,7 @@
 const usersDb = require('../database/users');
 const fs = require('fs');
 const path = require('path');
-const { getBotUsername } = require('../utils');
+const { getBotUsername, getChannelConnectionInstructions } = require('../utils');
 
 // Store conversation states
 const conversationStates = new Map();
@@ -584,15 +584,7 @@ async function handleChannelCallback(bot, query) {
         const botUsername = await getBotUsername(bot);
         
         await bot.editMessageText(
-          `📺 <b>Підключення каналу</b>\n\n` +
-          `Щоб бот міг публікувати графіки у ваш канал:\n\n` +
-          `1️⃣ Відкрийте ваш канал у Telegram\n` +
-          `2️⃣ Перейдіть у Налаштування каналу → Адміністратори\n` +
-          `3️⃣ Натисніть "Додати адміністратора"\n` +
-          `4️⃣ Знайдіть бота: ${botUsername}\n` +
-          `5️⃣ Надайте права на публікацію повідомлень\n\n` +
-          `Після цього натисніть кнопку "✅ Перевірити" нижче.\n\n` +
-          `💡 <b>Порада:</b> скопіюйте ${botUsername} і вставте у пошук`,
+          getChannelConnectionInstructions(botUsername),
           {
             chat_id: chatId,
             message_id: query.message.message_id,
