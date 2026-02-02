@@ -1,5 +1,6 @@
 const express = require('express');
 const path = require('path');
+const rateLimit = require('express-rate-limit');
 const config = require('./config');
 
 // API routes
@@ -8,6 +9,23 @@ const adminRouter = require('./api/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Rate limiting
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: { error: 'Занадто багато запитів, спробуйте пізніше' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // More strict for auth endpoints
+  message: { error: 'Занадто багато спроб автентифікації, спробуйте пізніше' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 // Middleware
 app.use(express.json());
@@ -26,9 +44,12 @@ app.use((req, res, next) => {
   next();
 });
 
+// Apply rate limiting to API routes
+app.use('/api', apiLimiter);
+
 // API routes
-app.use('/api', settingsRouter);
-app.use('/api/admin', adminRouter);
+app.use('/api', authLimiter, settingsRouter);
+app.use('/api/admin', authLimiter, adminRouter);
 
 // Статичні файли webapp
 app.use(express.static(path.join(__dirname, '../webapp')));
