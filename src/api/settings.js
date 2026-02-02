@@ -45,6 +45,7 @@ router.get('/user', async (req, res) => {
         schedule_alert_minutes: user.schedule_alert_minutes || 30,
         schedule_alert_target: user.schedule_alert_target || 'both',
       },
+      power_notify_target: user.power_notify_target || 'both',
       created_at: user.created_at,
       updated_at: user.updated_at,
     };
@@ -200,6 +201,32 @@ router.post('/user/schedule-alerts', async (req, res) => {
     res.json({ success: true, message: 'Налаштування попереджень оновлено' });
   } catch (error) {
     console.error('Помилка в POST /user/schedule-alerts:', error);
+    res.status(500).json({ error: 'Внутрішня помилка сервера' });
+  }
+});
+
+// Оновити налаштування цільової адреси для сповіщень про стан живлення
+router.post('/user/power-notify-target', async (req, res) => {
+  try {
+    const { power_notify_target } = req.body;
+    
+    if (!power_notify_target) {
+      return res.status(400).json({ error: 'Потрібно вказати power_notify_target' });
+    }
+    
+    if (!['bot', 'channel', 'both'].includes(power_notify_target)) {
+      return res.status(400).json({ error: 'Невірне значення power_notify_target. Дозволено: bot, channel, both' });
+    }
+    
+    const success = usersDb.updatePowerNotifyTarget(req.telegramUserId, power_notify_target);
+    
+    if (!success) {
+      return res.status(404).json({ error: 'Користувача не знайдено' });
+    }
+    
+    res.json({ success: true, message: 'Налаштування цілі сповіщень оновлено' });
+  } catch (error) {
+    console.error('Помилка в POST /user/power-notify-target:', error);
     res.status(500).json({ error: 'Внутрішня помилка сервера' });
   }
 });

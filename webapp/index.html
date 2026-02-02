@@ -40,6 +40,10 @@
                         <span class="accordion-arrow">▶</span>
                     </div>
                     <div class="accordion-content">
+                        <p class="section-hint">
+                            Оберіть вашу область та групу відключень. 
+                            Цю інформацію можна знайти на сайті вашого обленерго або в рахунку за електроенергію.
+                        </p>
                         <div class="form-group">
                             <label for="region-select">Регіон</label>
                             <select id="region-select" class="form-control">
@@ -63,19 +67,29 @@
                         <span class="accordion-arrow">▶</span>
                     </div>
                     <div class="accordion-content">
+                        <p class="section-hint">
+                            Підключіть свій Telegram-канал, щоб бот автоматично публікував туди графіки відключень.
+                        </p>
                         <div id="channel-info">
                             <p class="info-text">Завантаження...</p>
                         </div>
                     </div>
                 </div>
 
-                <!-- IP моніторинг -->
+                <!-- Моніторинг світла -->
                 <div class="accordion-item" id="accordion-ip">
                     <div class="accordion-header" onclick="toggleAccordion('accordion-ip')">
-                        <span>📡 IP моніторинг</span>
+                        <span>📡 Моніторинг світла</span>
                         <span class="accordion-arrow">▶</span>
                     </div>
                     <div class="accordion-content">
+                        <p class="section-hint">
+                            Бот може відстежувати наявність світла у вас вдома. Введіть IP-адресу вашого роутера — 
+                            коли світло зникає, роутер вимикається і стає недоступним. Бот помітить це і надішле вам повідомлення.<br><br>
+                            <strong>Де знайти IP роутера:</strong><br>
+                            • Зазвичай це 192.168.0.1 або 192.168.1.1<br>
+                            • Або подивіться на наклейці на роутері
+                        </p>
                         <div class="form-group">
                             <label for="router-ip">IP адреса роутера</label>
                             <input type="text" id="router-ip" class="form-control" placeholder="192.168.1.1">
@@ -92,97 +106,115 @@
                         <span class="accordion-arrow">▶</span>
                     </div>
                     <div class="accordion-content">
-                        <div class="form-group">
-                            <label>Сповіщення про відключення</label>
-                            <div class="toggle-group">
-                                <label class="toggle">
-                                    <input type="checkbox" id="alerts-off-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                        <p class="section-hint">Налаштуйте як і куди отримувати повідомлення</p>
+                        
+                        <!-- Підсекція 1: Про зміни в графіку -->
+                        <div class="subsection">
+                            <div class="subsection-header">
+                                <span>📊 Про зміни в графіку</span>
+                            </div>
+                            <p class="subsection-hint">
+                                Отримуйте повідомлення коли графік відключень змінюється
+                            </p>
+                            <div class="form-group">
+                                <label>Увімкнути сповіщення</label>
+                                <div class="toggle-group">
+                                    <label class="toggle">
+                                        <input type="checkbox" id="schedule-alert-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="schedule-alert-target">Куди надсилати</label>
+                                <select id="schedule-alert-target" class="form-control">
+                                    <option value="bot">📱 Тільки в бот</option>
+                                    <option value="channel">📺 Тільки в канал</option>
+                                    <option value="both">📱📺 В бот і канал</option>
+                                </select>
                             </div>
                         </div>
-
-                        <div class="form-group">
-                            <label for="notify-before-off">За скільки хвилин попереджати</label>
-                            <select id="notify-before-off" class="form-control">
-                                <option value="5">5 хвилин</option>
-                                <option value="10">10 хвилин</option>
-                                <option value="15">15 хвилин</option>
-                                <option value="30">30 хвилин</option>
-                                <option value="60">60 хвилин</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label>Сповіщення про включення</label>
-                            <div class="toggle-group">
-                                <label class="toggle">
-                                    <input type="checkbox" id="alerts-on-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                        
+                        <!-- Підсекція 2: Нагадування перед відключенням -->
+                        <div class="subsection">
+                            <div class="subsection-header">
+                                <span>⏰ Нагадування перед відключенням</span>
+                            </div>
+                            <p class="subsection-hint">
+                                Бот нагадає вам заздалегідь, що скоро вимкнуть світло (або увімкнуть) — щоб ви встигли підготуватися.
+                                <br><br>
+                                <strong>Приклад:</strong> якщо обрати "за 15 хв до відключення", і за графіком світло вимкнуть о 14:00 — бот надішле нагадування о 13:45.
+                            </p>
+                            <div class="form-group">
+                                <label>Сповіщення про відключення</label>
+                                <div class="toggle-group">
+                                    <label class="toggle">
+                                        <input type="checkbox" id="alerts-off-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="notify-before-off">До відключення (хвилин)</label>
+                                <select id="notify-before-off" class="form-control">
+                                    <option value="5">5 хвилин</option>
+                                    <option value="10">10 хвилин</option>
+                                    <option value="15">15 хвилин</option>
+                                    <option value="30">30 хвилин</option>
+                                    <option value="60">60 хвилин</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Сповіщення про включення</label>
+                                <div class="toggle-group">
+                                    <label class="toggle">
+                                        <input type="checkbox" id="alerts-on-enabled">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="notify-before-on">До включення (хвилин)</label>
+                                <select id="notify-before-on" class="form-control">
+                                    <option value="5">5 хвилин</option>
+                                    <option value="10">10 хвилин</option>
+                                    <option value="15">15 хвилин</option>
+                                    <option value="30">30 хвилин</option>
+                                    <option value="60">60 хвилин</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="notify-target">Куди надсилати</label>
+                                <select id="notify-target" class="form-control">
+                                    <option value="bot">📱 Тільки в бот</option>
+                                    <option value="channel">📺 Тільки в канал</option>
+                                    <option value="both">📱📺 В бот і канал</option>
+                                </select>
                             </div>
                         </div>
-
-                        <div class="form-group">
-                            <label for="notify-before-on">За скільки хвилин попереджати</label>
-                            <select id="notify-before-on" class="form-control">
-                                <option value="5">5 хвилин</option>
-                                <option value="10">10 хвилин</option>
-                                <option value="15">15 хвилин</option>
-                                <option value="30">30 хвилин</option>
-                                <option value="60">60 хвилин</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="notify-target">Куди надсилати</label>
-                            <select id="notify-target" class="form-control">
-                                <option value="bot">📱 Тільки в бот</option>
-                                <option value="channel">📺 Тільки в канал</option>
-                                <option value="both">📱📺 В бот і канал</option>
-                            </select>
-                        </div>
-
-                        <button id="save-alerts-btn" class="btn btn-primary">Зберегти</button>
-                    </div>
-                </div>
-
-                <!-- Попередження про графік -->
-                <div class="accordion-item" id="accordion-schedule">
-                    <div class="accordion-header" onclick="toggleAccordion('accordion-schedule')">
-                        <span>⏰ Попередження про графік</span>
-                        <span class="accordion-arrow">▶</span>
-                    </div>
-                    <div class="accordion-content">
-                        <div class="form-group">
-                            <label>Увімкнути попередження</label>
-                            <div class="toggle-group">
-                                <label class="toggle">
-                                    <input type="checkbox" id="schedule-alert-enabled">
-                                    <span class="toggle-slider"></span>
-                                </label>
+                        
+                        <!-- Підсекція 3: Фактичний стан світла -->
+                        <div class="subsection">
+                            <div class="subsection-header">
+                                <span>⚡ Фактичний стан світла</span>
+                            </div>
+                            <p class="subsection-hint">
+                                Повідомлення коли світло реально зникло або з'явилось.
+                                Працює тільки якщо налаштовано моніторинг (IP роутера).
+                            </p>
+                            <div class="form-group">
+                                <label for="power-notify-target">Куди надсилати</label>
+                                <select id="power-notify-target" class="form-control">
+                                    <option value="bot">📱 Тільки в бот</option>
+                                    <option value="channel">📺 Тільки в канал</option>
+                                    <option value="both">📱📺 В бот і канал</option>
+                                </select>
                             </div>
                         </div>
-
-                        <div class="form-group">
-                            <label for="schedule-alert-minutes">За скільки хвилин попереджати</label>
-                            <select id="schedule-alert-minutes" class="form-control">
-                                <option value="15">15 хвилин</option>
-                                <option value="30">30 хвилин</option>
-                                <option value="60">60 хвилин</option>
-                            </select>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="schedule-alert-target">Куди надсилати</label>
-                            <select id="schedule-alert-target" class="form-control">
-                                <option value="bot">📱 Тільки в бот</option>
-                                <option value="channel">📺 Тільки в канал</option>
-                                <option value="both">📱📺 В бот і канал</option>
-                            </select>
-                        </div>
-
-                        <button id="save-schedule-alerts-btn" class="btn btn-primary">Зберегти</button>
+                        
+                        <button id="save-all-notifications-btn" class="btn btn-primary">Зберегти всі налаштування</button>
                     </div>
                 </div>
 
@@ -193,7 +225,15 @@
                         <span class="accordion-arrow">▶</span>
                     </div>
                     <div class="accordion-content">
-                        <p class="warning-text">Увага! Ця дія незворотна. Всі ваші налаштування будуть видалені.</p>
+                        <p class="section-hint">Видалити всі ваші дані з бота</p>
+                        <p class="warning-text">
+                            ⚠️ Увага! Ця дія незворотна.<br><br>
+                            <strong>Буде видалено:</strong><br>
+                            • Ваші налаштування<br>
+                            • Підключений канал<br>
+                            • Історію сповіщень<br><br>
+                            Після видалення можна почати заново командою /start
+                        </p>
                         <button id="delete-data-btn" class="btn btn-danger">Видалити всі дані</button>
                     </div>
                 </div>
