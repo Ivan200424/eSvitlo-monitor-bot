@@ -222,13 +222,6 @@ function getAdminKeyboard() {
     ],
   ];
   
-  // Add Web App button if URL is configured
-  if (process.env.WEBAPP_URL) {
-    buttons.push([
-      { text: '🌐 Web App', web_app: { url: process.env.WEBAPP_URL } }
-    ]);
-  }
-  
   buttons.push([
     { text: '← Назад', callback_data: 'back_to_settings' }
   ]);
