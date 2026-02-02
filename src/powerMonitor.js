@@ -399,8 +399,10 @@ function startPowerMonitoring(botInstance) {
   console.log(`   Інтервал перевірки: ${formatInterval(config.POWER_CHECK_INTERVAL)}`);
   console.log(`   Debounce: ${debounceMinutes} хв (очікування стабільного стану)`);
   
-  // Відновлюємо стани з БД
-  restoreUserStates();
+  // Відновлюємо стани з БД (асинхронно, не блокуємо запуск)
+  restoreUserStates().catch(error => {
+    console.error('Помилка відновлення станів:', error);
+  });
   
   // Запускаємо періодичну перевірку
   monitoringInterval = setInterval(async () => {
