@@ -1,6 +1,7 @@
 const usersDb = require('../database/users');
 const fs = require('fs');
 const path = require('path');
+const { getBotUsername, getChannelConnectionInstructions } = require('../utils');
 
 // Store conversation states
 const conversationStates = new Map();
@@ -579,21 +580,18 @@ async function handleChannelCallback(bot, query) {
         );
       } else {
         // Немає pending каналу - показати інструкції
+        // Отримуємо username бота для інструкції (з кешем)
+        const botUsername = await getBotUsername(bot);
+        
         await bot.editMessageText(
-          `📺 <b>Підключення каналу</b>\n\n` +
-          `1️⃣ Додайте бота як адміністратора вашого каналу\n` +
-          `2️⃣ Дайте боту права на:\n` +
-          `   • Публікацію повідомлень\n` +
-          `   • Редагування інформації каналу\n` +
-          `3️⃣ Поверніться сюди і натисніть "✚ Підключити"\n\n` +
-          `⏳ Очікую додавання бота в канал...`,
+          getChannelConnectionInstructions(botUsername),
           {
             chat_id: chatId,
             message_id: query.message.message_id,
             parse_mode: 'HTML',
             reply_markup: {
               inline_keyboard: [
-                [{ text: '🔄 Перевірити', callback_data: 'channel_connect' }],
+                [{ text: '✅ Перевірити', callback_data: 'channel_connect' }],
                 [{ text: '← Назад', callback_data: 'settings_channel' }]
               ]
             }
