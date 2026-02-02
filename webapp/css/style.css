@@ -448,3 +448,99 @@ html {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-secondary);
 }
+
+/* Accordion Styles (iOS 26 glassmorphism) */
+.accordion-item {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--border-radius);
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: var(--transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.accordion-item:hover {
+  box-shadow: var(--shadow-md);
+}
+
+/* Accordion header */
+.accordion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 17px;
+  font-weight: 600;
+  transition: var(--transition);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.accordion-header:active {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .accordion-header:active {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+/* Accordion arrow */
+.accordion-arrow {
+  font-size: 14px;
+  transition: transform 0.3s ease;
+  color: var(--text-secondary);
+}
+
+.accordion-item.open .accordion-arrow {
+  transform: rotate(90deg);
+}
+
+/* Accordion content */
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 0 20px;
+}
+
+.accordion-item.open .accordion-content {
+  max-height: 2000px;
+  padding: 0 20px 16px;
+}
+
+/* Dangerous accordion item (delete) */
+.accordion-item.danger .accordion-header {
+  color: var(--destructive);
+}
+
+/* Card inner (for nested cards in accordion) */
+.card-inner {
+  background: var(--bg-secondary);
+  border-radius: var(--border-radius-sm);
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card-inner:last-child {
+  margin-bottom: 0;
+}
+
+.card-inner-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Haptic feedback simulation */
+.accordion-header:active {
+  transform: scale(0.995);
+}

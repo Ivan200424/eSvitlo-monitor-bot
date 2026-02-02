@@ -21,6 +21,26 @@ let isAdmin = false;
 // API базовий URL (для локальної розробки або production)
 const API_BASE = window.location.origin;
 
+// Accordion toggle function - only one section open at a time
+function toggleAccordion(itemId) {
+  const clickedItem = document.getElementById(itemId);
+  const allItems = document.querySelectorAll('.accordion-item');
+  
+  // Haptic feedback
+  if (tg.HapticFeedback) {
+    tg.HapticFeedback.impactOccurred('light');
+  }
+  
+  // Close all items except the clicked one
+  allItems.forEach(item => {
+    if (item.id === itemId) {
+      item.classList.toggle('open');
+    } else {
+      item.classList.remove('open');
+    }
+  });
+}
+
 // Допоміжна функція для API запитів
 async function apiRequest(endpoint, method = 'GET', body = null) {
   const headers = {

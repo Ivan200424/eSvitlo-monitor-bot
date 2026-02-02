@@ -8,6 +8,7 @@ const settingsRouter = require('./api/settings');
 const adminRouter = require('./api/admin');
 
 const app = express();
+app.set('trust proxy', 1);  // Довіряти першому proxy (Railway)
 const PORT = process.env.PORT || 3000;
 
 // Rate limiting
