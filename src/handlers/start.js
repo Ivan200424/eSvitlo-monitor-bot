@@ -243,11 +243,15 @@ async function handleWizardCallback(bot, query) {
           }
         );
       } else {
-        // Режим створення нового користувача
+        // Режим створення нового користувача (legacy flow without notification target selection)
         // Перевіряємо чи користувач вже існує (для безпеки)
         const existingUser = usersDb.getUserByTelegramId(telegramId);
         
-        if (!existingUser) {
+        if (existingUser) {
+          // Користувач вже існує - оновлюємо налаштування
+          usersDb.updateUserRegionAndQueue(telegramId, state.region, state.queue);
+        } else {
+          // Створюємо нового користувача
           usersDb.createUser(telegramId, username, state.region, state.queue);
         }
         wizardState.delete(telegramId);
@@ -301,7 +305,8 @@ async function handleWizardCallback(bot, query) {
       const existingUser = usersDb.getUserByTelegramId(telegramId);
       
       if (existingUser) {
-        // Користувач вже існує - оновлюємо налаштування
+        // Користувач вже існує - оновлюємо налаштування включаючи регіон та чергу з wizard
+        usersDb.updateUserRegionAndQueue(telegramId, state.region, state.queue);
         usersDb.updateUserPowerNotifyTarget(telegramId, 'bot');
       } else {
         // Створюємо користувача з power_notify_target = 'bot'
@@ -354,7 +359,8 @@ async function handleWizardCallback(bot, query) {
       const existingUser = usersDb.getUserByTelegramId(telegramId);
       
       if (existingUser) {
-        // Користувач вже існує - оновлюємо налаштування
+        // Користувач вже існує - оновлюємо налаштування включаючи регіон та чергу з wizard
+        usersDb.updateUserRegionAndQueue(telegramId, state.region, state.queue);
         usersDb.updateUserPowerNotifyTarget(telegramId, 'channel');
       } else {
         // Створюємо нового користувача з power_notify_target = 'channel'
