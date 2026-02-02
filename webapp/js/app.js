@@ -199,7 +199,11 @@ function populateForms() {
   // Schedule alerts (підсекція "Про зміни в графіку")
   if (userData.schedule_alerts) {
     document.getElementById('schedule-alert-enabled').checked = userData.schedule_alerts.schedule_alert_enabled;
-    document.getElementById('schedule-alert-target').value = userData.schedule_alerts.schedule_alert_target;
+    document.getElementById('schedule-alert-target').value = userData.schedule_alerts.schedule_alert_target || 'both';
+  } else {
+    // Default values if schedule_alerts is not set
+    document.getElementById('schedule-alert-enabled').checked = false;
+    document.getElementById('schedule-alert-target').value = 'both';
   }
   
   // Alerts (підсекція "Нагадування перед відключенням")
