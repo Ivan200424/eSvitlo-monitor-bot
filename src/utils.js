@@ -245,6 +245,7 @@ function generateLiveStatusMessage(user, regionName) {
   const hasPowerState = user.power_state !== null && user.power_state !== undefined;
   const hasIp = user.router_ip !== null && user.router_ip !== undefined;
   const hasChannel = user.channel_id !== null && user.channel_id !== undefined;
+  // Notifications are enabled if is_active (master switch) is true AND at least one alert type is enabled
   const notificationsEnabled = user.is_active && (user.alerts_off_enabled || user.alerts_on_enabled);
   
   if (!hasIp) {
@@ -256,6 +257,7 @@ function generateLiveStatusMessage(user, regionName) {
     message += powerOn ? '🟢 Світло зараз: Є\n' : '🔴 Світло зараз: Немає\n';
     
     // Add update time if available
+    // power_changed_at is expected to be an ISO 8601 datetime string (e.g., "2026-02-02T14:30:00.000Z")
     if (user.power_changed_at) {
       const updateDate = new Date(user.power_changed_at);
       const hours = String(updateDate.getHours()).padStart(2, '0');
