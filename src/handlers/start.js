@@ -2,6 +2,7 @@ const usersDb = require('../database/users');
 const { formatWelcomeMessage, formatErrorMessage } = require('../formatter');
 const { getRegionKeyboard, getMainMenu, getQueueKeyboard, getConfirmKeyboard, getErrorKeyboard, getWizardNotifyTargetKeyboard } = require('../keyboards/inline');
 const { REGIONS } = require('../constants/regions');
+const { getBotUsername } = require('../utils');
 
 // Constants imported from channel.js for consistency
 const PENDING_CHANNEL_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes
@@ -12,25 +13,6 @@ const wizardState = new Map();
 
 // Зберігаємо останній message_id меню для кожного користувача
 const lastMenuMessages = new Map();
-
-// Кешуємо username бота щоб не робити повторні API виклики
-let cachedBotUsername = null;
-
-// Функція для отримання username бота (з кешуванням)
-async function getBotUsername(bot) {
-  if (cachedBotUsername) {
-    return cachedBotUsername;
-  }
-  
-  try {
-    const botInfo = await bot.getMe();
-    cachedBotUsername = `@${botInfo.username}`;
-    return cachedBotUsername;
-  } catch (error) {
-    console.error('Помилка отримання інформації про бота:', error);
-    return 'цей_бот';
-  }
-}
 
 // Запустити wizard для нового або існуючого користувача
 async function startWizard(bot, chatId, telegramId, username, mode = 'new') {

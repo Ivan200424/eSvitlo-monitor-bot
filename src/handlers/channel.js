@@ -1,6 +1,7 @@
 const usersDb = require('../database/users');
 const fs = require('fs');
 const path = require('path');
+const { getBotUsername } = require('../utils');
 
 // Store conversation states
 const conversationStates = new Map();
@@ -11,25 +12,6 @@ const CHANNEL_DESCRIPTION_BASE = '⚡️ СвітлоЧек — слідкує, 
 const PHOTO_PATH = path.join(__dirname, '../../photo_for_channels.PNG');
 const PENDING_CHANNEL_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes
 const FORMAT_SETTINGS_MESSAGE = '📋 <b>Формат публікацій</b>\n\nНалаштуйте формат повідомлень для вашого каналу:';
-
-// Кешуємо username бота щоб не робити повторні API виклики
-let cachedBotUsername = null;
-
-// Функція для отримання username бота (з кешуванням)
-async function getBotUsername(bot) {
-  if (cachedBotUsername) {
-    return cachedBotUsername;
-  }
-  
-  try {
-    const botInfo = await bot.getMe();
-    cachedBotUsername = `@${botInfo.username}`;
-    return cachedBotUsername;
-  } catch (error) {
-    console.error('Помилка отримання інформації про бота:', error);
-    return 'цей_бот';
-  }
-}
 
 // Обробник команди /channel
 async function handleChannel(bot, msg) {

@@ -296,6 +296,25 @@ function generateLiveStatusMessage(user, regionName) {
   return message;
 }
 
+// Кешуємо username бота щоб не робити повторні API виклики
+let cachedBotUsername = null;
+
+// Функція для отримання username бота (з кешуванням)
+async function getBotUsername(bot) {
+  if (cachedBotUsername) {
+    return cachedBotUsername;
+  }
+  
+  try {
+    const botInfo = await bot.getMe();
+    cachedBotUsername = `@${botInfo.username}`;
+    return cachedBotUsername;
+  } catch (error) {
+    console.error('Помилка отримання інформації про бота:', error);
+    return 'цей_бот';
+  }
+}
+
 module.exports = {
   calculateHash,
   formatTime,
@@ -314,4 +333,5 @@ module.exports = {
   formatInterval,
   formatDuration,
   generateLiveStatusMessage,
+  getBotUsername,
 };
