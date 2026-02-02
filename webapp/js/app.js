@@ -256,9 +256,16 @@ document.getElementById('save-region-btn').addEventListener('click', async () =>
 document.getElementById('save-ip-btn').addEventListener('click', async () => {
   const ip = document.getElementById('router-ip').value.trim();
   
-  if (ip && !/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
-    showMessage('Невірний формат IP адреси', true);
-    return;
+  if (ip) {
+    // Validate IP format and range
+    const parts = ip.split('.');
+    if (parts.length !== 4 || !parts.every(part => {
+      const num = parseInt(part, 10);
+      return !isNaN(num) && num >= 0 && num <= 255 && part === String(num);
+    })) {
+      showMessage('Невірний формат IP адреси. Кожна частина має бути від 0 до 255.', true);
+      return;
+    }
   }
   
   try {

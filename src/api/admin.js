@@ -4,6 +4,14 @@ const usersDb = require('../database/users');
 const { getSetting, setSetting } = require('../database/db');
 const { authMiddleware, adminMiddleware } = require('./auth');
 
+// Constants for validation
+const MIN_SCHEDULE_INTERVAL_MINUTES = 1;
+const MAX_SCHEDULE_INTERVAL_MINUTES = 60;
+const MIN_POWER_CHECK_INTERVAL_SECONDS = 1;
+const MAX_POWER_CHECK_INTERVAL_SECONDS = 300;
+const MIN_DEBOUNCE_MINUTES = 1;
+const MAX_DEBOUNCE_MINUTES = 30;
+
 // Застосовуємо auth та admin middleware до всіх роутів
 router.use(authMiddleware);
 router.use(adminMiddleware);
@@ -88,24 +96,30 @@ router.post('/intervals', async (req, res) => {
     
     if (schedule_check_interval !== undefined) {
       const value = parseInt(schedule_check_interval);
-      if (value < 1 || value > 60) {
-        return res.status(400).json({ error: 'schedule_check_interval має бути від 1 до 60 хвилин' });
+      if (value < MIN_SCHEDULE_INTERVAL_MINUTES || value > MAX_SCHEDULE_INTERVAL_MINUTES) {
+        return res.status(400).json({ 
+          error: `schedule_check_interval має бути від ${MIN_SCHEDULE_INTERVAL_MINUTES} до ${MAX_SCHEDULE_INTERVAL_MINUTES} хвилин` 
+        });
       }
       setSetting('schedule_check_interval', String(value * 60)); // зберігаємо в секундах
     }
     
     if (power_check_interval !== undefined) {
       const value = parseInt(power_check_interval);
-      if (value < 1 || value > 300) {
-        return res.status(400).json({ error: 'power_check_interval має бути від 1 до 300 секунд' });
+      if (value < MIN_POWER_CHECK_INTERVAL_SECONDS || value > MAX_POWER_CHECK_INTERVAL_SECONDS) {
+        return res.status(400).json({ 
+          error: `power_check_interval має бути від ${MIN_POWER_CHECK_INTERVAL_SECONDS} до ${MAX_POWER_CHECK_INTERVAL_SECONDS} секунд` 
+        });
       }
       setSetting('power_check_interval', String(value));
     }
     
     if (power_debounce_minutes !== undefined) {
       const value = parseInt(power_debounce_minutes);
-      if (value < 1 || value > 30) {
-        return res.status(400).json({ error: 'power_debounce_minutes має бути від 1 до 30 хвилин' });
+      if (value < MIN_DEBOUNCE_MINUTES || value > MAX_DEBOUNCE_MINUTES) {
+        return res.status(400).json({ 
+          error: `power_debounce_minutes має бути від ${MIN_DEBOUNCE_MINUTES} до ${MAX_DEBOUNCE_MINUTES} хвилин` 
+        });
       }
       setSetting('power_debounce_minutes', String(value));
     }

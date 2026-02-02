@@ -1,6 +1,9 @@
 const crypto = require('crypto');
 const config = require('../config');
 
+// Constants
+const AUTH_EXPIRY_SECONDS = 3600; // 1 hour
+
 /**
  * Перевірка Telegram initData для автентифікації Web App
  * Документація: https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
@@ -33,11 +36,11 @@ function verifyTelegramWebAppData(telegramInitData) {
       params[key] = value;
     });
     
-    // Перевіряємо термін дії (не старше 1 години)
+    // Перевіряємо термін дії
     if (params.auth_date) {
       const authDate = parseInt(params.auth_date);
       const now = Math.floor(Date.now() / 1000);
-      if (now - authDate > 3600) {
+      if (now - authDate > AUTH_EXPIRY_SECONDS) {
         return null;
       }
     }
