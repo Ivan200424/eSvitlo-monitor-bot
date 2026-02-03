@@ -8,6 +8,9 @@ const { initChannelGuard, checkExistingUsers } = require('./channelGuard');
 const { formatInterval } = require('./utils');
 const config = require('./config');
 
+// Флаг для запобігання подвійного завершення
+let isShuttingDown = false;
+
 console.log('🚀 Запуск СвітлоЧек...');
 console.log(`📍 Timezone: ${config.timezone}`);
 console.log(`📊 Перевірка графіків: кожні ${formatInterval(config.checkIntervalSeconds)}`);
@@ -28,27 +31,34 @@ setTimeout(() => {
   checkExistingUsers(bot);
 }, 5000); // Wait 5 seconds after startup
 
-// Graceful shutdown
+// Graceful shutdown з захистом від подвійного виклику
 const shutdown = async (signal) => {
+  if (isShuttingDown) {
+    console.log('⏳ Завершення вже виконується...');
+    return;
+  }
+  isShuttingDown = true;
+  
   console.log(`\n⏳ Отримано ${signal}, завершую роботу...`);
   
   try {
-    // Зупиняємо моніторинг живлення
-    stopPowerMonitoring();
-    console.log('✅ Моніторинг живлення зупинено');
-    
-    // Зберігаємо всі стани користувачів
-    await saveAllUserStates();
-    console.log('✅ Стани користувачів збережено');
-    
-    // Зупиняємо polling
+    // 1. Зупиняємо polling (припиняємо прийом нових повідомлень)
     await bot.stopPolling();
     console.log('✅ Polling зупинено');
     
-    // Закриваємо базу даних
-    const db = require('./database/db');
-    db.close();
-    console.log('✅ База даних закрита');
+    // 2. Зупиняємо моніторинг живлення
+    stopPowerMonitoring();
+    console.log('✅ Моніторинг живлення зупинено');
+    
+    // 3. Зберігаємо всі стани користувачів
+    await saveAllUserStates();
+    console.log('✅ Стани користувачів збережено');
+    
+    // 4. Закриваємо базу даних коректно
+    const { closeDatabase } = require('./database/db');
+    if (closeDatabase) {
+      closeDatabase();
+    }
     
     console.log('👋 Бот завершив роботу');
     process.exit(0);
@@ -59,17 +69,17 @@ const shutdown = async (signal) => {
 };
 
 // Обробка сигналів завершення
-process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
 
 // Обробка необроблених помилок
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('Необроблене відхилення промісу:', reason);
-});
-
 process.on('uncaughtException', async (error) => {
   console.error('❌ Необроблена помилка:', error);
   await shutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Необроблене відхилення промісу:', reason);
 });
 
 console.log('✨ Бот успішно запущено та готовий до роботи!');

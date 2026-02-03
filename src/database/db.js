@@ -189,8 +189,11 @@ function runMigrations() {
   }
 }
 
-// Налаштування для кращої продуктивності
-db.pragma('journal_mode = WAL');
+// Налаштування для кращої продуктивності та масштабованості
+db.pragma('journal_mode = WAL'); // Write-Ahead Logging для швидкості
+db.pragma('synchronous = NORMAL'); // Баланс між продуктивністю та безпекою
+db.pragma('cache_size = 10000'); // Більший кеш для швидкості
+db.pragma('temp_store = MEMORY'); // Тимчасові таблиці в пам'яті
 db.pragma('foreign_keys = ON');
 
 // Ініціалізація БД при запуску
@@ -226,6 +229,19 @@ function setSetting(key, value) {
   }
 }
 
+/**
+ * Коректно закриває з'єднання з БД
+ */
+function closeDatabase() {
+  try {
+    db.close();
+    console.log('✅ БД закрита коректно');
+  } catch (error) {
+    console.error('❌ Помилка закриття БД:', error);
+  }
+}
+
 module.exports = db;
 module.exports.getSetting = getSetting;
 module.exports.setSetting = setSetting;
+module.exports.closeDatabase = closeDatabase;
