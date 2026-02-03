@@ -29,6 +29,7 @@ async function withRetry(fn, options = {}) {
         throw error;
       }
       
+      // Експоненційний backoff: перша спроба чекає delayMs, друга - delayMs * backoff, тощо
       const delay = delayMs * Math.pow(backoff, attempt - 1);
       logger.info(`Спроба ${attempt}/${maxAttempts} не вдалась, повтор через ${delay}ms...`);
       await new Promise(resolve => setTimeout(resolve, delay));

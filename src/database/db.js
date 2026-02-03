@@ -192,7 +192,7 @@ function runMigrations() {
 // Налаштування для кращої продуктивності та масштабованості
 db.pragma('journal_mode = WAL'); // Write-Ahead Logging для швидкості
 db.pragma('synchronous = NORMAL'); // Баланс між продуктивністю та безпекою
-db.pragma('cache_size = 10000'); // Більший кеш для швидкості
+db.pragma('cache_size = 10000'); // Більший кеш: 10000 сторінок (~40MB) для швидкості
 db.pragma('temp_store = MEMORY'); // Тимчасові таблиці в пам'яті
 db.pragma('foreign_keys = ON');
 
