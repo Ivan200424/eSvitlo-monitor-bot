@@ -6,6 +6,10 @@ const db = require('./db');
  */
 function addScheduleToHistory(userId, region, queue, scheduleData, hash) {
   try {
+    // Delete old schedules for today before inserting
+    const today = new Date().toISOString().split('T')[0];
+    db.prepare(`DELETE FROM schedule_history WHERE date(created_at) = ?`).run(today);
+    
     // Insert new schedule
     const stmt = db.prepare(`
       INSERT INTO schedule_history (user_id, region, queue, schedule_data, hash, created_at)

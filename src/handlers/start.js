@@ -40,16 +40,6 @@ async function handleStart(bot, msg) {
   const username = msg.from.username || msg.from.first_name;
   
   try {
-    // Видаляємо попереднє меню якщо є
-    const lastMenuId = lastMenuMessages.get(telegramId);
-    if (lastMenuId) {
-      try {
-        await bot.deleteMessage(chatId, lastMenuId);
-      } catch (e) {
-        // Ігноруємо якщо не вдалося видалити (наприклад, повідомлення вже видалено)
-      }
-    }
-    
     // Перевіряємо чи користувач вже існує
     const user = usersDb.getUserByTelegramId(telegramId);
     
@@ -57,6 +47,12 @@ async function handleStart(bot, msg) {
       // Check if user was deactivated
       if (!user.is_active) {
         const { getRestorationKeyboard } = require('../keyboards/inline');
+        
+        // Видалити попереднє
+        if (user && user.last_start_message_id) {
+          try { await bot.deleteMessage(chatId, user.last_start_message_id); } catch (e) {}
+        }
+        
         const sentMessage = await bot.sendMessage(
           chatId,
           `👋 З поверненням!\n\n` +
@@ -64,6 +60,10 @@ async function handleStart(bot, msg) {
           `Оберіть опцію:`,
           getRestorationKeyboard()
         );
+        
+        // Зберегти ID
+        usersDb.updateUser(telegramId, { last_start_message_id: sentMessage.message_id });
+        
         lastMenuMessages.set(telegramId, sentMessage.message_id);
         return;
       }
@@ -91,6 +91,11 @@ async function handleStart(bot, msg) {
       message += `📺 Канал: ${user.channel_id ? user.channel_id + ' ✅' : 'не підключено'}\n`;
       message += `🔔 Сповіщення: ${user.is_active ? 'увімкнено ✅' : 'вимкнено'}\n`;
       
+      // Видалити попереднє
+      if (user && user.last_start_message_id) {
+        try { await bot.deleteMessage(chatId, user.last_start_message_id); } catch (e) {}
+      }
+      
       const sentMessage = await bot.sendMessage(
         chatId,
         message,
@@ -99,6 +104,10 @@ async function handleStart(bot, msg) {
           ...getMainMenu(botStatus, channelPaused)
         }
       );
+      
+      // Зберегти ID
+      usersDb.updateUser(telegramId, { last_start_message_id: sentMessage.message_id });
+      
       lastMenuMessages.set(telegramId, sentMessage.message_id);
     } else {
       // Новий користувач - запускаємо wizard

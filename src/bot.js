@@ -557,8 +557,6 @@ bot.on('callback_query', async (query) => {
         
         // Format timer message according to the new requirements
         const lines = [];
-        lines.push('⏱ Таймер');
-        lines.push('');
         
         if (!nextEvent) {
           // No outages today

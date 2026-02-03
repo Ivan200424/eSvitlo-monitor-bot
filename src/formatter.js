@@ -55,7 +55,7 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes =
   
   // Today's schedule
   if (todayEvents.length > 0) {
-    lines.push(`💡 Графік відключень <b>на сьогодні, ${todayDate} (${todayName})</b>, для черги ${queue}:`);
+    lines.push(`<i>💡 Зʼявився графік на сьогодні, <b>${todayDate}</b> (${todayName}), для черги ${queue}:</i>`);
     lines.push('');
     todayEvents.forEach(event => {
       const start = formatTime(event.start);
@@ -64,10 +64,10 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes =
       const durationStr = formatDurationFromMs(durationMs);
       const key = `${event.start}_${event.end}`;
       const isNew = newEventKeys.has(key);
-      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>${isNew ? ' 🆕' : ''}`);
+      lines.push(`🪫 <b>${start} - ${end}</b> (~${durationStr})${isNew ? ' 🆕' : ''}`);
     });
   } else {
-    lines.push(`💡 Графік відключень <b>на сьогодні, ${todayDate} (${todayName})</b>, для черги ${queue}:`);
+    lines.push(`<i>💡 Зʼявився графік на сьогодні, <b>${todayDate}</b> (${todayName}), для черги ${queue}:</i>`);
     lines.push('');
     lines.push('✅ Відключень не заплановано');
   }
@@ -76,7 +76,7 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes =
   
   // Tomorrow's schedule - only show if there are actual outages
   if (tomorrowEvents.length > 0) {
-    lines.push(`💡 Графік відключень <b>на завтра, ${tomorrowDate} (${tomorrowName})</b>, для черги ${queue}:`);
+    lines.push(`<i>💡 Зʼявився графік на завтра, <b>${tomorrowDate}</b> (${tomorrowName}), для черги ${queue}:</i>`);
     lines.push('');
     tomorrowEvents.forEach(event => {
       const start = formatTime(event.start);
@@ -85,9 +85,16 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes =
       const durationStr = formatDurationFromMs(durationMs);
       const key = `${event.start}_${event.end}`;
       const isNew = newEventKeys.has(key);
-      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>${isNew ? ' 🆕' : ''}`);
+      lines.push(`🪫 <b>${start} - ${end}</b> (~${durationStr})${isNew ? ' 🆕' : ''}`);
     });
   }
+  
+  // Add footer with update time
+  const updateTime = new Date();
+  const updateDateStr = `${String(updateTime.getDate()).padStart(2, '0')}.${String(updateTime.getMonth() + 1).padStart(2, '0')}.${String(updateTime.getFullYear()).slice(-2)}`;
+  const updateTimeStr = `${String(updateTime.getHours()).padStart(2, '0')}:${String(updateTime.getMinutes()).padStart(2, '0')}`;
+  lines.push('');
+  lines.push(`Оновлено ${updateDateStr} о <b>${updateTimeStr}</b> (ДТЕК)`);
   
   return lines.join('\n');
 }

@@ -31,10 +31,18 @@ async function handleSettings(bot, msg) {
     // Generate Live Status message using helper function
     const message = generateLiveStatusMessage(user, regionName);
     
-    await bot.sendMessage(chatId, message, {
+    // Видалити попереднє
+    if (user && user.last_settings_message_id) {
+      try { await bot.deleteMessage(chatId, user.last_settings_message_id); } catch (e) {}
+    }
+    
+    const sentMsg = await bot.sendMessage(chatId, message, {
       parse_mode: 'HTML',
       ...getSettingsKeyboard(userIsAdmin),
     });
+    
+    // Зберегти ID
+    usersDb.updateUser(telegramId, { last_settings_message_id: sentMsg.message_id });
     
   } catch (error) {
     console.error('Помилка в handleSettings:', error);

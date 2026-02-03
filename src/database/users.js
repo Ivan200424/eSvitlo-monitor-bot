@@ -547,6 +547,39 @@ function updateUserScheduleAlertSettings(telegramId, settings) {
   return result.changes > 0;
 }
 
+// Оновити довільні поля користувача
+function updateUser(telegramId, updates) {
+  const fields = [];
+  const values = [];
+  
+  // Allow updating any column except id and telegram_id
+  const allowedFields = [
+    'last_start_message_id', 'last_settings_message_id', 
+    'last_schedule_message_id', 'last_timer_message_id'
+  ];
+  
+  for (const [key, value] of Object.entries(updates)) {
+    if (allowedFields.includes(key)) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+  }
+  
+  if (fields.length === 0) return false;
+  
+  fields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(telegramId);
+  
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET ${fields.join(', ')}
+    WHERE telegram_id = ?
+  `);
+  
+  const result = stmt.run(...values);
+  return result.changes > 0;
+}
+
 module.exports = {
   createUser,
   getUserByTelegramId,
@@ -586,4 +619,5 @@ module.exports = {
   updateScheduleAlertMinutes,
   updateScheduleAlertTarget,
   updateUserScheduleAlertSettings,
+  updateUser,
 };

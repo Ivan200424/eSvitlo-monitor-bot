@@ -31,14 +31,32 @@ async function handleSchedule(bot, msg) {
     // Спробуємо відправити зображення графіка з caption
     try {
       const imageBuffer = await fetchScheduleImage(user.region, user.queue);
-      await bot.sendPhoto(chatId, imageBuffer, {
+      
+      // Видалити попереднє
+      if (user && user.last_schedule_message_id) {
+        try { await bot.deleteMessage(chatId, user.last_schedule_message_id); } catch (e) {}
+      }
+      
+      const sentMsg = await bot.sendPhoto(chatId, imageBuffer, {
         caption: message,
         parse_mode: 'HTML',
       }, { filename: 'schedule.png', contentType: 'image/png' });
+      
+      // Зберегти ID
+      usersDb.updateUser(telegramId, { last_schedule_message_id: sentMsg.message_id });
     } catch (imgError) {
       // Якщо зображення недоступне, відправляємо тільки текст
       console.log('Зображення графіка недоступне:', imgError.message);
-      await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+      
+      // Видалити попереднє
+      if (user && user.last_schedule_message_id) {
+        try { await bot.deleteMessage(chatId, user.last_schedule_message_id); } catch (e) {}
+      }
+      
+      const sentMsg = await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+      
+      // Зберегти ID
+      usersDb.updateUser(telegramId, { last_schedule_message_id: sentMsg.message_id });
     }
     
   } catch (error) {
@@ -95,7 +113,16 @@ async function handleTimer(bot, msg) {
     const nextEvent = findNextEvent(scheduleData);
     
     const message = formatTimerMessage(nextEvent);
-    await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+    
+    // Видалити попереднє
+    if (user && user.last_timer_message_id) {
+      try { await bot.deleteMessage(chatId, user.last_timer_message_id); } catch (e) {}
+    }
+    
+    const sentMsg = await bot.sendMessage(chatId, message, { parse_mode: 'HTML' });
+    
+    // Зберегти ID
+    usersDb.updateUser(telegramId, { last_timer_message_id: sentMsg.message_id });
     
   } catch (error) {
     console.error('Помилка в handleTimer:', error);
