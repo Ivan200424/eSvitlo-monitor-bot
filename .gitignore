@@ -148,3 +148,4 @@ vite.config.ts.timestamp-*
 test-changes.js
 test-ui-fixes.js
 test-integration.js
+test-utils.js
