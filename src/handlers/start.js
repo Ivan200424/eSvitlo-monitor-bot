@@ -15,6 +15,12 @@ const wizardState = new Map();
 // Зберігаємо останній message_id меню для кожного користувача
 const lastMenuMessages = new Map();
 
+// Helper function to check if user is in wizard
+function isInWizard(telegramId) {
+  const state = wizardState.get(telegramId);
+  return !!(state && state.step);
+}
+
 // Запустити wizard для нового або існуючого користувача
 async function startWizard(bot, chatId, telegramId, username, mode = 'new') {
   wizardState.set(telegramId, { step: 'region', mode });
@@ -62,6 +68,16 @@ async function handleStart(bot, msg) {
   const username = msg.from.username || msg.from.first_name;
   
   try {
+    // Якщо користувач в процесі wizard — не пускати в головне меню
+    if (isInWizard(telegramId)) {
+      await safeSendMessage(bot, chatId, 
+        '⚠️ Спочатку завершіть налаштування!\n\n' +
+        'Продовжіть з того місця, де зупинились.',
+        { parse_mode: 'HTML' }
+      );
+      return;
+    }
+    
     // Видаляємо попереднє меню якщо є
     const user = usersDb.getUserByTelegramId(telegramId);
     if (user && user.last_start_message_id) {
@@ -546,4 +562,5 @@ module.exports = {
   handleStart,
   handleWizardCallback,
   startWizard,
+  isInWizard,
 };

@@ -149,3 +149,4 @@ test-changes.js
 test-ui-fixes.js
 test-integration.js
 test-utils.js
+test-format-changes.js
