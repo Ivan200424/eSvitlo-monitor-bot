@@ -76,8 +76,12 @@ async function safeEditMessageText(bot, text, options = {}) {
       // Повідомлення вже актуальне, нічого робити не потрібно
       return null;
     }
-    // Інші помилки логуємо
-    logger.error(`Помилка редагування тексту повідомлення:`, { error: error.message });
+    // Інші помилки логуємо з повним контекстом
+    logger.error(`Помилка редагування тексту повідомлення:`, { 
+      error: error.message,
+      code: error.code,
+      description: error.response?.body?.description
+    });
     throw error;
   }
 }
