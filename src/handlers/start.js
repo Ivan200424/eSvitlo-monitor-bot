@@ -67,7 +67,7 @@ async function handleStart(bot, msg) {
     if (state && state.step) {
       await safeSendMessage(bot, chatId, 
         '⚠️ Спочатку завершіть налаштування!\n\n' +
-        'Продовжіть з того місця, де зупинились, або натисніть кнопку нижче.',
+        'Продовжіть з того місця, де зупинились.',
         { parse_mode: 'HTML' }
       );
       return;
@@ -553,9 +553,15 @@ async function handleWizardCallback(bot, query) {
   }
 }
 
+// Helper function to check if user is in wizard
+function isInWizard(telegramId) {
+  const state = wizardState.get(telegramId);
+  return !!(state && state.step);
+}
+
 module.exports = {
   handleStart,
   handleWizardCallback,
   startWizard,
-  wizardState,
+  isInWizard,
 };
