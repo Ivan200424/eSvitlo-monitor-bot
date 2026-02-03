@@ -25,7 +25,7 @@ async function startWizard(bot, chatId, telegramId, username, mode = 'new') {
     try {
       await bot.deleteMessage(chatId, lastMsgId);
     } catch (e) {
-      // Ігноруємо помилки: повідомлення може бути вже видалене користувачем або прострочене
+      // Ігноруємо помилки: повідомлення може бути вже видалене користувачем або застаріле
     }
   }
   
