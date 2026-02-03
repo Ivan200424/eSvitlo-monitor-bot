@@ -19,20 +19,39 @@ const lastMenuMessages = new Map();
 async function startWizard(bot, chatId, telegramId, username, mode = 'new') {
   wizardState.set(telegramId, { step: 'region', mode });
   
+  // Видаляємо попереднє wizard-повідомлення якщо є
+  const lastMsgId = lastMenuMessages.get(telegramId);
+  if (lastMsgId) {
+    try {
+      await bot.deleteMessage(chatId, lastMsgId);
+    } catch (e) {
+      // Ігноруємо помилки: повідомлення може бути вже видалене користувачем або застаріле
+    }
+  }
+  
+  let sentMessage;
   if (mode === 'new') {
-    await safeSendMessage(
+    sentMessage = await safeSendMessage(
       bot,
       chatId,
       formatWelcomeMessage(username),
       { parse_mode: 'HTML', ...getRegionKeyboard() }
     );
   } else {
-    await safeSendMessage(
+    sentMessage = await safeSendMessage(
       bot,
       chatId,
       '1️⃣ Оберіть ваш регіон:',
       getRegionKeyboard()
     );
+  }
+  
+  // Зберігаємо ID нового повідомлення або видаляємо запис при невдачі
+  if (sentMessage) {
+    lastMenuMessages.set(telegramId, sentMessage.message_id);
+  } else {
+    // Видаляємо запис якщо не вдалося відправити, щоб уникнути застарілих ID
+    lastMenuMessages.delete(telegramId);
   }
 }
 

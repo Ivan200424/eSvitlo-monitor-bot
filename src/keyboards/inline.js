@@ -208,10 +208,10 @@ function getScheduleIntervalKeyboard() {
     reply_markup: {
       inline_keyboard: [
         [
+          { text: '1 хв', callback_data: 'admin_schedule_1' },
           { text: '5 хв', callback_data: 'admin_schedule_5' },
           { text: '10 хв', callback_data: 'admin_schedule_10' },
-          { text: '15 хв', callback_data: 'admin_schedule_15' },
-          { text: '30 хв', callback_data: 'admin_schedule_30' }
+          { text: '15 хв', callback_data: 'admin_schedule_15' }
         ],
         [
           { text: '← Назад', callback_data: 'admin_intervals' },
