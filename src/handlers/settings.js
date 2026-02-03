@@ -13,6 +13,35 @@ const ipSetupStates = new Map();
 // IP address validation regex
 const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$/;
 
+// IP address validation function
+function isValidIP(ip) {
+  // Видаляємо пробіли
+  const trimmed = ip.trim();
+  
+  // Перевіряємо чи немає пробілів всередині
+  if (trimmed.includes(' ')) {
+    return { valid: false, error: 'IP-адреса не може містити пробіли' };
+  }
+  
+  // Перевіряємо формат IPv4
+  const ipRegex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+  const match = trimmed.match(ipRegex);
+  
+  if (!match) {
+    return { valid: false, error: 'Невірний формат IP-адреси. Приклад: 192.168.1.1' };
+  }
+  
+  // Перевіряємо що кожна частина 0-255
+  for (let i = 1; i <= 4; i++) {
+    const num = parseInt(match[i], 10);
+    if (num < 0 || num > 255) {
+      return { valid: false, error: 'Кожне число в IP-адресі має бути від 0 до 255' };
+    }
+  }
+  
+  return { valid: true, ip: trimmed };
+}
+
 // Обробник команди /settings
 async function handleSettings(bot, msg) {
   const chatId = msg.chat.id;
@@ -632,9 +661,10 @@ async function handleIpConversation(bot, msg) {
     if (state.warningTimeout) clearTimeout(state.warningTimeout);
     if (state.finalTimeout) clearTimeout(state.finalTimeout);
     
-    // Validate IP address format
-    if (!IP_REGEX.test(text)) {
-      await bot.sendMessage(chatId, '❌ Невірний формат IP-адреси. Спробуйте ще раз.\n\nПриклад: 192.168.1.1');
+    // Validate IP address
+    const validation = isValidIP(text);
+    if (!validation.valid) {
+      await bot.sendMessage(chatId, `❌ ${validation.error}`);
       
       // Reset timeout with new 5-minute timer
       const warningTimeout = setTimeout(() => {
@@ -662,44 +692,13 @@ async function handleIpConversation(bot, msg) {
       return true;
     }
     
-    // Additional validation: check if octets are in valid range
-    const octets = text.split('.').map(Number);
-    if (octets.some(octet => octet < 0 || octet > 255)) {
-      await bot.sendMessage(chatId, '❌ Невірні значення в IP-адресі (кожне число має бути від 0 до 255). Спробуйте ще раз.');
-      
-      // Reset timeout with new 5-minute timer
-      const warningTimeout = setTimeout(() => {
-        bot.sendMessage(
-          chatId,
-          '⏳ Залишилась 1 хвилина.\n' +
-          'Надішліть IP-адресу або продовжіть пізніше.'
-        ).catch(() => {});
-      }, 240000); // 4 minutes
-      
-      const finalTimeout = setTimeout(() => {
-        ipSetupStates.delete(telegramId);
-        bot.sendMessage(
-          chatId,
-          '⌛ <b>Час вийшов.</b>\n' +
-          'Режим налаштування IP завершено.',
-          { parse_mode: 'HTML' }
-        ).catch(() => {});
-      }, 300000); // 5 minutes
-      
-      state.warningTimeout = warningTimeout;
-      state.finalTimeout = finalTimeout;
-      ipSetupStates.set(telegramId, state);
-      
-      return true;
-    }
-    
-    // Save IP address
-    usersDb.updateUserRouterIp(telegramId, text);
+    // Save IP address (use cleaned IP from validation)
+    usersDb.updateUserRouterIp(telegramId, validation.ip);
     ipSetupStates.delete(telegramId);
     
     await bot.sendMessage(
       chatId,
-      `✅ IP-адресу збережено: ${text}\n\n` +
+      `✅ IP-адресу збережено: ${validation.ip}\n\n` +
       `Тепер бот буде моніторити доступність цієї адреси для визначення наявності світла.`
     );
     

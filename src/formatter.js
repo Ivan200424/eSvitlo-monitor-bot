@@ -277,54 +277,117 @@ function formatHelpMessage() {
   return lines.join('\n');
 }
 
-// Форматувати повідомлення про графік для каналу (новий формат)
-function formatScheduleForChannel(region, queue, scheduleData, todayDate) {
-  const { REGIONS } = require('./constants/regions');
+// Форматувати повідомлення про графік для каналу (новий формат з HTML)
+function formatScheduleForChannel(region, queue, scheduleData, updateDate, updateTime) {
   const { formatDurationFromMs } = require('./utils');
   
-  const regionName = REGIONS[region]?.name || region;
+  // Get today's date info
+  const now = new Date();
+  const dayNames = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+  const dayName = dayNames[now.getDay()];
+  const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+  
   const lines = [];
   
-  // Заголовок
-  const date = todayDate || new Date();
-  const dayNames = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
-  const dayName = dayNames[date.getDay()];
-  const dateStr = `${String(date.getDate()).padStart(2, '0')}.${String(date.getMonth() + 1).padStart(2, '0')}.${date.getFullYear()}`;
-  
-  lines.push(`💡 Графік відключень <b>на сьогодні, ${dateStr} (${dayName})</b>, для черги ${queue}:`);
+  // Заголовок з курсивом та жирним
+  lines.push(`<i>💡 Оновлено графік відключень <b>на сьогодні, ${dateStr} (${dayName}),</b> для черги ${queue}:</i>`);
   lines.push('');
   
   if (!scheduleData.hasData || scheduleData.events.length === 0) {
     lines.push('✅ Відключень не заплановано');
-    return lines.join('\n');
+  } else {
+    // Get today's events
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    
+    const todayEvents = [];
+    let totalDurationMs = 0;
+    
+    scheduleData.events.forEach(event => {
+      const eventStart = new Date(event.start);
+      if (eventStart >= todayStart && eventStart <= todayEnd) {
+        todayEvents.push(event);
+        const durationMs = new Date(event.end) - new Date(event.start);
+        totalDurationMs += durationMs;
+      }
+    });
+    
+    // Show events
+    if (todayEvents.length > 0) {
+      todayEvents.forEach(event => {
+        const start = formatTime(event.start);
+        const end = formatTime(event.end);
+        const durationMs = new Date(event.end) - new Date(event.start);
+        const durationStr = formatDurationFromMs(durationMs);
+        lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>`);
+      });
+      
+      // Calculate total hours
+      const totalHours = formatDurationFromMs(totalDurationMs);
+      lines.push(`Загалом без світла:<b> ~${totalHours}</b>`);
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
   }
   
-  // Розділяємо події на планові та можливі (тільки на сьогодні)
-  const todayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+  // Add footer with update time from DTEK
+  lines.push('');
+  lines.push(`<i>Оновлено ${updateDate} о <b>${updateTime}</b> ДТЕК</i>`);
   
-  const todayPlanned = [];
-  const todayPossible = [];
+  return lines.join('\n');
+}
+
+// Форматувати повідомлення про графік для бота (простий текст без HTML)
+function formatScheduleForBot(region, queue, scheduleData) {
+  const { formatDurationFromMs } = require('./utils');
   
-  scheduleData.events.forEach(event => {
-    if (event.start >= todayStart && event.start <= todayEnd) {
-      if (event.isPossible) {
-        todayPossible.push(event);
-      } else {
-        todayPlanned.push(event);
+  // Get today's date info
+  const now = new Date();
+  const dayNames = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+  const dayName = dayNames[now.getDay()];
+  const dateStr = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+  
+  const lines = [];
+  
+  // Заголовок без HTML
+  lines.push(`💡 Графік відключень на сьогодні, ${dateStr} (${dayName}), для черги ${queue}:`);
+  lines.push('');
+  
+  if (!scheduleData.hasData || scheduleData.events.length === 0) {
+    lines.push('✅ Відключень не заплановано');
+  } else {
+    // Get today's events
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+    
+    const todayEvents = [];
+    let totalDurationMs = 0;
+    
+    scheduleData.events.forEach(event => {
+      const eventStart = new Date(event.start);
+      if (eventStart >= todayStart && eventStart <= todayEnd) {
+        todayEvents.push(event);
+        const durationMs = new Date(event.end) - new Date(event.start);
+        totalDurationMs += durationMs;
       }
-    }
-  });
-  
-  // Планові відключення
-  if (todayPlanned.length > 0) {
-    todayPlanned.forEach(event => {
-      const start = formatTime(event.start);
-      const end = formatTime(event.end);
-      const durationMs = event.end - event.start;
-      const durationStr = formatDurationFromMs(durationMs);
-      lines.push(`🪫 <b>${start} - ${end} (~${durationStr})</b>`);
     });
+    
+    // Show events
+    if (todayEvents.length > 0) {
+      todayEvents.forEach(event => {
+        const start = formatTime(event.start);
+        const end = formatTime(event.end);
+        const durationMs = new Date(event.end) - new Date(event.start);
+        const durationStr = formatDurationFromMs(durationMs);
+        lines.push(`🪫 ${start} - ${end} (~${durationStr})`);
+      });
+      
+      // Calculate total hours
+      const totalHours = formatDurationFromMs(totalDurationMs);
+      lines.push(`Загалом без світла: ~${totalHours}`);
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
   }
   
   return lines.join('\n');
@@ -474,6 +537,7 @@ module.exports = {
   formatWelcomeMessage,
   formatHelpMessage,
   formatScheduleForChannel,
+  formatScheduleForBot,
   formatStatsForChannelPopup,
   formatScheduleChanges,
   formatTemplate,

@@ -1,6 +1,6 @@
 const { fetchScheduleData, fetchScheduleImage } = require('./api');
 const { parseScheduleForQueue, findNextEvent } = require('./parser');
-const { formatScheduleMessage, formatTemplate } = require('./formatter');
+const { formatScheduleMessage, formatScheduleForChannel, formatTemplate } = require('./formatter');
 const { getLastSchedule, getPreviousSchedule, addScheduleToHistory, compareSchedules } = require('./database/scheduleHistory');
 const usersDb = require('./database/users');
 const { REGIONS } = require('./constants/regions');
@@ -112,15 +112,18 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
       updateType = getUpdateType(previousSchedule.schedule_data, scheduleData);
     }
     
-    // Форматуємо повідомлення
-    let messageText = formatScheduleMessage(region, queue, scheduleData, nextEvent, changes, updateType);
+    // Get current date and time for DTEK timestamp
+    const now = new Date();
+    const updateDate = `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`;
+    const updateTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    // Форматуємо повідомлення для каналу з новим форматом
+    let messageText = formatScheduleForChannel(region, queue, scheduleData, updateDate, updateTime);
     
     // Apply custom caption template if set
     if (user.schedule_caption) {
-      const now = new Date();
-      
       const variables = {
-        d: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}.${now.getFullYear()}`,
+        d: updateDate,
         dm: `${String(now.getDate()).padStart(2, '0')}.${String(now.getMonth() + 1).padStart(2, '0')}`,
         dd: 'сьогодні',
         sdw: SHORT_DAY_NAMES[now.getDay()],
