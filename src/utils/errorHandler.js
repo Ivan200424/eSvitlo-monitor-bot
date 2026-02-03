@@ -64,11 +64,12 @@ async function safeEditMessage(bot, chatId, messageId, text, options = {}) {
  * @param {String|Number} chatId - ID чату
  * @param {String|Buffer} photo - Фото (file_id, URL, або Buffer)
  * @param {Object} options - Додаткові опції (caption, parse_mode тощо)
+ * @param {Object} fileOpts - Опції файлу (filename, contentType)
  * @returns {Promise<Object|null>} - Відправлене повідомлення або null при помилці
  */
-async function safeSendPhoto(bot, chatId, photo, options = {}) {
+async function safeSendPhoto(bot, chatId, photo, options = {}, fileOpts = {}) {
   try {
-    return await bot.sendPhoto(chatId, photo, options);
+    return await bot.sendPhoto(chatId, photo, options, fileOpts);
   } catch (error) {
     logger.error(`Помилка відправки фото ${chatId}:`, { error: error.message });
     return null;

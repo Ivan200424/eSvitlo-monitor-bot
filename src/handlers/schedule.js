@@ -41,7 +41,7 @@ async function handleSchedule(bot, msg) {
       sentMsg = await safeSendPhoto(bot, chatId, imageBuffer, {
         caption: message,
         parse_mode: 'HTML',
-      });
+      }, { filename: 'schedule.png', contentType: 'image/png' });
     } catch (imgError) {
       // Якщо зображення недоступне, відправляємо тільки текст
       console.log('Зображення графіка недоступне:', imgError.message);

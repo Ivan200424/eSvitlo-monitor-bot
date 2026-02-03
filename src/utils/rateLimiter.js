@@ -28,6 +28,9 @@ class RateLimiter {
       const oldestRequest = this.requests[0];
       const waitTime = this.windowMs - (now - oldestRequest);
       await new Promise(resolve => setTimeout(resolve, waitTime));
+      // Оновлюємо список після очікування
+      const afterWait = Date.now();
+      this.requests = this.requests.filter(time => afterWait - time < this.windowMs);
     }
     
     this.requests.push(Date.now());
