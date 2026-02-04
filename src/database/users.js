@@ -318,6 +318,7 @@ function updateChannelBranding(telegramId, brandingData) {
         channel_user_title = ?,
         channel_user_description = ?,
         channel_status = 'active',
+        channel_branding_updated_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
     WHERE telegram_id = ?
   `);
@@ -330,6 +331,53 @@ function updateChannelBranding(telegramId, brandingData) {
     brandingData.userDescription || null,
     telegramId
   );
+  return result.changes > 0;
+}
+
+// Оновити частково брендування каналу (з можливістю оновити лише окремі поля)
+function updateChannelBrandingPartial(telegramId, brandingData) {
+  const fields = [];
+  const values = [];
+  
+  if (brandingData.channelTitle !== undefined) {
+    fields.push('channel_title = ?');
+    values.push(brandingData.channelTitle);
+  }
+  
+  if (brandingData.channelDescription !== undefined) {
+    fields.push('channel_description = ?');
+    values.push(brandingData.channelDescription);
+  }
+  
+  if (brandingData.channelPhotoFileId !== undefined) {
+    fields.push('channel_photo_file_id = ?');
+    values.push(brandingData.channelPhotoFileId);
+  }
+  
+  if (brandingData.userTitle !== undefined) {
+    fields.push('channel_user_title = ?');
+    values.push(brandingData.userTitle);
+  }
+  
+  if (brandingData.userDescription !== undefined) {
+    fields.push('channel_user_description = ?');
+    values.push(brandingData.userDescription);
+  }
+  
+  if (fields.length === 0) return false;
+  
+  // Always update the timestamp when branding is changed through bot
+  fields.push('channel_branding_updated_at = CURRENT_TIMESTAMP');
+  fields.push('updated_at = CURRENT_TIMESTAMP');
+  values.push(telegramId);
+  
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET ${fields.join(', ')}
+    WHERE telegram_id = ?
+  `);
+  
+  const result = stmt.run(...values);
   return result.changes > 0;
 }
 
@@ -594,6 +642,7 @@ module.exports = {
   getUsersWithAlertsEnabled,
   resetUserChannel,
   updateChannelBranding,
+  updateChannelBrandingPartial,
   updateChannelStatus,
   getUsersWithActiveChannels,
   getUsersWithChannelsForVerification,
