@@ -728,6 +728,23 @@ bot.on('my_chat_member', async (update) => {
     if (newStatus !== 'administrator') return;
     if (oldStatus === 'administrator') return; // Вже був адміном
     
+    // Перевірка режиму паузи
+    const { checkPauseForChannelActions } = require('./utils/guards');
+    const pauseCheck = checkPauseForChannelActions();
+    if (pauseCheck.blocked) {
+      // Бот на паузі - не дозволяємо додавання каналів
+      try {
+        await bot.sendMessage(
+          userId,
+          pauseCheck.message,
+          { parse_mode: 'HTML' }
+        );
+      } catch (error) {
+        console.error('Error sending pause message in my_chat_member:', error);
+      }
+      return;
+    }
+    
     const channelId = String(chat.id);
     const channelUsername = chat.username ? `@${chat.username}` : chat.title;
     const usersDb = require('./database/users');
