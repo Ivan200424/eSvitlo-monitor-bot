@@ -3,6 +3,10 @@
 /**
  * Test script for channel welcome message functionality
  * Tests that welcome message changes based on router_ip configuration
+ * 
+ * Note: This test uses a copy of the function logic to test without 
+ * requiring database dependencies, consistent with other test files 
+ * in this repository that run without full bot initialization.
  */
 
 const assert = require('assert');
