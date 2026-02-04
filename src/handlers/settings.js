@@ -105,9 +105,37 @@ async function handleSettingsCallback(bot, query) {
       return;
     }
     
-    // Змінити регіон/чергу
+    // Показати підтвердження перед зміною черги
     if (data === 'settings_region') {
-      // Видаляємо попереднє повідомлення з настройками
+      const confirmKeyboard = {
+        inline_keyboard: [
+          [
+            { text: '✅ Так, змінити', callback_data: 'settings_region_confirm' },
+            { text: '❌ Скасувати', callback_data: 'back_to_settings' }
+          ]
+        ]
+      };
+      
+      await safeEditMessageText(bot,
+        '⚠️ <b>Зміна регіону/черги</b>\n\n' +
+        'Ви впевнені, що хочете змінити регіон або чергу?\n\n' +
+        'Поточні налаштування:\n' +
+        `📍 Регіон: ${REGIONS[user.region]?.name || user.region}\n` +
+        `🔢 Черга: ${user.queue}`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: confirmKeyboard,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Підтвердження зміни черги
+    if (data === 'settings_region_confirm') {
+      // Видаляємо попереднє повідомлення
       try {
         await bot.deleteMessage(chatId, query.message.message_id);
       } catch (e) {
@@ -453,6 +481,30 @@ async function handleSettingsCallback(bot, query) {
         }
       );
       await bot.answerCallbackQuery(query.id, { text: '✅ Канал розблоковано' });
+      
+      // Затримка 3 секунди
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      
+      // Повернення до головного меню
+      const updatedUser = usersDb.getUserByTelegramId(telegramId);
+      const { getMainMenu } = require('../keyboards/inline');
+      
+      let botStatus = 'active';
+      if (!updatedUser.channel_id) {
+        botStatus = 'no_channel';
+      } else if (!updatedUser.is_active) {
+        botStatus = 'paused';
+      }
+      const channelPaused = updatedUser.channel_paused === 1;
+      
+      await bot.sendMessage(
+        chatId,
+        '🏠 <b>Головне меню</b>',
+        {
+          parse_mode: 'HTML',
+          ...getMainMenu(botStatus, channelPaused),
+        }
+      );
       return;
     }
     

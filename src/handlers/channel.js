@@ -293,6 +293,31 @@ async function handleConversation(bot, msg) {
         );
         
         conversationStates.delete(telegramId);
+        
+        // Затримка 3 секунди
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Повернення до головного меню
+        const user = usersDb.getUserByTelegramId(telegramId);
+        const { getMainMenu } = require('../keyboards/inline');
+        
+        let botStatus = 'active';
+        if (!user.channel_id) {
+          botStatus = 'no_channel';
+        } else if (!user.is_active) {
+          botStatus = 'paused';
+        }
+        const channelPaused = user.channel_paused === 1;
+        
+        await bot.sendMessage(
+          chatId,
+          '🏠 <b>Головне меню</b>',
+          {
+            parse_mode: 'HTML',
+            ...getMainMenu(botStatus, channelPaused),
+          }
+        );
+        
         return true;
       } catch (error) {
         console.error('Error updating channel title:', error);
@@ -344,6 +369,31 @@ async function handleConversation(bot, msg) {
         );
         
         conversationStates.delete(telegramId);
+        
+        // Затримка 3 секунди
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        // Повернення до головного меню
+        const user = usersDb.getUserByTelegramId(telegramId);
+        const { getMainMenu } = require('../keyboards/inline');
+        
+        let botStatus = 'active';
+        if (!user.channel_id) {
+          botStatus = 'no_channel';
+        } else if (!user.is_active) {
+          botStatus = 'paused';
+        }
+        const channelPaused = user.channel_paused === 1;
+        
+        await bot.sendMessage(
+          chatId,
+          '🏠 <b>Головне меню</b>',
+          {
+            parse_mode: 'HTML',
+            ...getMainMenu(botStatus, channelPaused),
+          }
+        );
+        
         return true;
       } catch (error) {
         console.error('Error updating channel description:', error);
@@ -1582,8 +1632,8 @@ async function applyChannelBranding(bot, chatId, telegramId, state) {
     
     await bot.sendMessage(chatId, successMessage, { parse_mode: 'HTML' });
     
-    // Затримка 4 секунди
-    await new Promise(resolve => setTimeout(resolve, 4000));
+    // Затримка 3 секунди
+    await new Promise(resolve => setTimeout(resolve, 3000));
     
     // Send main menu after successful channel setup
     const user = usersDb.getUserByTelegramId(telegramId);
