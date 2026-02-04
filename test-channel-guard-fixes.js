@@ -21,7 +21,8 @@ try {
   } else if (hasVoltyk) {
     console.log('✓ Назву бота виправлено на "Вольтик"\n');
   } else {
-    console.log('⚠️  Не знайдено жодної назви бота\n');
+    console.log('✗ Не знайдено жодної назви бота\n');
+    process.exit(1);
   }
 } catch (error) {
   console.log(`✗ Помилка: ${error.message}\n`);

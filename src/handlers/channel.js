@@ -1483,7 +1483,6 @@ async function applyChannelBranding(bot, chatId, telegramId, state) {
       const failedOperations = [];
       if (!operations.title) failedOperations.push('назву');
       if (!operations.description) failedOperations.push('опис');
-      if (!operations.photo) failedOperations.push('фото');
       
       await bot.sendMessage(
         chatId,

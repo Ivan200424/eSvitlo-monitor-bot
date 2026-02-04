@@ -10,6 +10,15 @@ const crypto = require('crypto');
 const DAY_NAMES = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
 const SHORT_DAY_NAMES = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
 
+// Helper function to get bot ID (cached in bot.options.id)
+async function ensureBotId(bot) {
+  if (!bot.options.id) {
+    const botInfo = await bot.getMe();
+    bot.options.id = botInfo.id;
+  }
+  return bot.options.id;
+}
+
 // Визначити тип оновлення графіка
 function getUpdateType(previousSchedule, currentSchedule) {
   // Split events into today and tomorrow
@@ -72,12 +81,8 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
       const chatInfo = await bot.getChat(user.channel_id);
       
       // Check if bot has necessary permissions
-      if (!bot.options.id) {
-        const botInfo = await bot.getMe();
-        bot.options.id = botInfo.id;
-      }
-      
-      const botMember = await bot.getChatMember(user.channel_id, bot.options.id);
+      const botId = await ensureBotId(bot);
+      const botMember = await bot.getChatMember(user.channel_id, botId);
       
       if (botMember.status !== 'administrator' || !botMember.can_post_messages) {
         console.log(`Бот не має прав на публікацію в канал ${user.channel_id}, оновлюємо статус`);

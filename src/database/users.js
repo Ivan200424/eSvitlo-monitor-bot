@@ -364,7 +364,10 @@ function updateChannelBrandingPartial(telegramId, brandingData) {
     values.push(brandingData.userDescription);
   }
   
-  if (fields.length === 0) return false;
+  if (fields.length === 0) {
+    console.warn('updateChannelBrandingPartial викликано без полів для оновлення');
+    return false;
+  }
   
   // Always update the timestamp when branding is changed through bot
   fields.push('channel_branding_updated_at = CURRENT_TIMESTAMP');
