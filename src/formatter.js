@@ -107,16 +107,14 @@ function formatScheduleMessage(region, queue, scheduleData, nextEvent, changes =
   if (todayEvents.length > 0) {
     // Determine header based on update type and context (channel vs bot)
     let header;
-    if (updateType && updateType.todayUnchanged) {
-      header = `<i>💡 Сьогоднішній графік <b>без змін:</b></i>`;
+    if (updateType && updateType.todayUnchanged && tomorrowEvents.length > 0) {
+      // When tomorrow's schedule appears and today's schedule is unchanged
+      header = `<i>💡 Графік на сьогодні <b>без змін:</b></i>`;
     } else if (updateType && updateType.todayUpdated) {
-      // For channel: use "Оновлено графік", for bot: use "Графік відключень"
-      if (isChannel) {
-        header = `<i>💡 Оновлено графік відключень <b>на сьогодні, ${todayDate} (${todayName}),</b> для черги ${queue}:</i>`;
-      } else {
-        header = `<i>💡 Графік відключень <b>на сьогодні, ${todayDate} (${todayName}),</b> для черги ${queue}:</i>`;
-      }
+      // When today's schedule is updated
+      header = `<i>💡 Оновлено графік відключень <b>на сьогодні, ${todayDate} (${todayName}),</b> для черги ${queue}:</i>`;
     } else {
+      // First time showing or no special context
       header = `<i>💡 Графік відключень <b>на сьогодні, ${todayDate} (${todayName}),</b> для черги ${queue}:</i>`;
     }
     lines.push(header);
