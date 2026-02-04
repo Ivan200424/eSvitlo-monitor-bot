@@ -347,7 +347,9 @@ async function handleConversation(bot, msg) {
       
       // Get bot username
       const botUsername = await getBotUsername(bot);
-      const botLink = `🤖 @${botUsername}`;
+      // Remove leading @ if present since getBotUsername already includes it
+      const cleanUsername = botUsername.startsWith('@') ? botUsername.slice(1) : botUsername;
+      const botLink = `🤖 @${cleanUsername}`;
       
       // Format description according to new requirements
       let fullDescription;
@@ -1527,7 +1529,9 @@ async function applyChannelBranding(bot, chatId, telegramId, state) {
     
     // Get bot username
     const botUsername = await getBotUsername(bot);
-    const botLink = `🤖 @${botUsername}`;
+    // Remove leading @ if present since getBotUsername already includes it
+    const cleanUsername = botUsername.startsWith('@') ? botUsername.slice(1) : botUsername;
+    const botLink = `🤖 @${cleanUsername}`;
     
     // Format description according to new requirements
     let fullDescription;
