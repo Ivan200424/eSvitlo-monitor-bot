@@ -197,11 +197,18 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
     // Створюємо inline кнопки
     const buttons = [];
     
-    // Always show the same buttons layout
-    buttons.push([
-      { text: '⏰ Таймер', callback_data: `timer_${user.id}` },
-      { text: '📊 Статистика', callback_data: `stats_${user.id}` }
-    ]);
+    // Show timer button
+    const timerButton = { text: '⏰ Таймер', callback_data: `timer_${user.id}` };
+    
+    // Show statistics button only if router_ip is configured
+    if (user.router_ip) {
+      buttons.push([
+        timerButton,
+        { text: '📊 Статистика', callback_data: `stats_${user.id}` }
+      ]);
+    } else {
+      buttons.push([timerButton]);
+    }
     
     const inlineKeyboard = {
       inline_keyboard: buttons
