@@ -51,6 +51,29 @@ function clearIpSetupState(telegramId) {
   deleteUserState(telegramId, 'ip_setup');
 }
 
+// Helper function to send main menu
+async function sendMainMenu(bot, chatId, telegramId) {
+  const user = usersDb.getUserByTelegramId(telegramId);
+  const { getMainMenu } = require('../keyboards/inline');
+  
+  let botStatus = 'active';
+  if (!user.channel_id) {
+    botStatus = 'no_channel';
+  } else if (!user.is_active) {
+    botStatus = 'paused';
+  }
+  const channelPaused = user.channel_paused === 1;
+  
+  await bot.sendMessage(
+    chatId,
+    '🏠 <b>Головне меню</b>',
+    {
+      parse_mode: 'HTML',
+      ...getMainMenu(botStatus, channelPaused),
+    }
+  ).catch(() => {});
+}
+
 /**
  * Відновити IP setup стани з БД при запуску бота
  */
@@ -114,7 +137,7 @@ function isValidIPorDomain(input) {
     return { valid: true, address: trimmed, host, port, type: 'domain' };
   }
   
-  return { valid: false, error: 'Невірний формат. Введіть IP-адресу або доменне імʼя.\n\nПриклади:\n• 89.267.32.1\n• 89.267.32.1:80\n• myhome.ddns.net' };
+  return { valid: false, error: 'Невірний формат. Введіть IP-адресу або доменне імʼя.\n\nПриклади:\n• 89.167.32.1\n• 89.167.32.1:80\n• myhome.ddns.net' };
 }
 
 // Обробник команди /settings
@@ -511,25 +534,7 @@ async function handleSettingsCallback(bot, query) {
         ).catch(() => {});
         
         // Повернення в головне меню
-        const user = usersDb.getUserByTelegramId(telegramId);
-        const { getMainMenu } = require('../keyboards/inline');
-        
-        let botStatus = 'active';
-        if (!user.channel_id) {
-          botStatus = 'no_channel';
-        } else if (!user.is_active) {
-          botStatus = 'paused';
-        }
-        const channelPaused = user.channel_paused === 1;
-        
-        await bot.sendMessage(
-          chatId,
-          '🏠 <b>Головне меню</b>',
-          {
-            parse_mode: 'HTML',
-            ...getMainMenu(botStatus, channelPaused),
-          }
-        ).catch(() => {});
+        await sendMainMenu(bot, chatId, telegramId);
       }, 300000); // 5 minutes
       
       setIpSetupState(telegramId, {
@@ -870,25 +875,7 @@ async function handleIpConversation(bot, msg) {
         ).catch(() => {});
         
         // Повернення в головне меню
-        const user = usersDb.getUserByTelegramId(telegramId);
-        const { getMainMenu } = require('../keyboards/inline');
-        
-        let botStatus = 'active';
-        if (!user.channel_id) {
-          botStatus = 'no_channel';
-        } else if (!user.is_active) {
-          botStatus = 'paused';
-        }
-        const channelPaused = user.channel_paused === 1;
-        
-        await bot.sendMessage(
-          chatId,
-          '🏠 <b>Головне меню</b>',
-          {
-            parse_mode: 'HTML',
-            ...getMainMenu(botStatus, channelPaused),
-          }
-        ).catch(() => {});
+        await sendMainMenu(bot, chatId, telegramId);
       }, 300000); // 5 minutes
       
       state.warningTimeout = warningTimeout;
