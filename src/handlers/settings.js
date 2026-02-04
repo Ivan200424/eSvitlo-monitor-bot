@@ -29,7 +29,8 @@ setInterval(() => {
 function setIpSetupState(telegramId, data) {
   const stateWithTimestamp = { ...data, timestamp: Date.now() };
   ipSetupStates.set(telegramId, stateWithTimestamp);
-  // Don't persist timeout handlers to DB, just the essential data
+  // Don't persist timeout handlers to DB - they contain function references
+  // that cannot be serialized and would be expired on restart anyway
   const { warningTimeout, finalTimeout, timeout, ...persistData } = data;
   saveUserState(telegramId, 'ip_setup', { ...persistData, timestamp: Date.now() });
 }
