@@ -28,6 +28,30 @@ function calculateHash(data, queueKey, todayTimestamp, tomorrowTimestamp) {
   }
 }
 
+// Calculate hash for schedule periods (only periods and times, no metadata)
+// This is used for detecting real changes in schedules
+function calculateSchedulePeriodsHash(events) {
+  try {
+    if (!events || events.length === 0) {
+      return null;
+    }
+    
+    // Extract only essential data: start and end times
+    // Sort to ensure consistent order
+    const periods = events
+      .map(event => ({
+        start: event.start.toISOString(),
+        end: event.end.toISOString()
+      }))
+      .sort((a, b) => a.start.localeCompare(b.start));
+    
+    return crypto.createHash('sha256').update(JSON.stringify(periods)).digest('hex');
+  } catch (error) {
+    console.error('Помилка обчислення хешу періодів:', error.message);
+    return null;
+  }
+}
+
 // Форматувати час для відображення
 function formatTime(date) {
   if (!date) return 'невідомо';
@@ -346,6 +370,7 @@ function getChannelConnectionInstructions(botUsername) {
 
 module.exports = {
   calculateHash,
+  calculateSchedulePeriodsHash,
   formatTime,
   formatDate,
   formatDateTime,
