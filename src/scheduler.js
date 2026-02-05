@@ -1,12 +1,281 @@
 const cron = require('node-cron');
 const { fetchScheduleData } = require('./api');
 const { parseScheduleForQueue, findNextEvent } = require('./parser');
-const { calculateHash, formatInterval } = require('./utils');
+const { calculateSchedulePeriodsHash, formatInterval } = require('./utils');
 const usersDb = require('./database/users');
 const config = require('./config');
 const { REGION_CODES } = require('./constants/regions');
 
 let bot = null;
+
+// Day name constants
+const DAY_NAMES = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+
+// Helper: Get date string in format YYYY-MM-DD
+function getDateString(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// Helper: Split events into today and tomorrow
+function splitEventsByDay(events) {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayEnd = new Date(todayStart);
+  todayEnd.setDate(todayEnd.getDate() + 1);
+  todayEnd.setMilliseconds(-1);
+  
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const tomorrowEnd = new Date(tomorrowStart);
+  tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+  tomorrowEnd.setMilliseconds(-1);
+  
+  const todayEvents = events.filter(event => {
+    const eventStart = new Date(event.start);
+    return eventStart >= todayStart && eventStart <= todayEnd;
+  });
+  
+  const tomorrowEvents = events.filter(event => {
+    const eventStart = new Date(event.start);
+    return eventStart >= tomorrowStart && eventStart <= tomorrowEnd;
+  });
+  
+  return { todayEvents, tomorrowEvents };
+}
+
+// Handle day transition (midnight 00:00)
+function handleDayTransition(user) {
+  const now = new Date();
+  const todayDateStr = getDateString(now);
+  
+  // Check if we need to shift tomorrow->today
+  // This happens when:
+  // 1. We have tomorrow's data saved
+  // 2. Today's saved date is not today anymore (it's yesterday)
+  if (user.last_published_date_tomorrow && user.last_published_date_today !== todayDateStr) {
+    console.log(`[${user.telegram_id}] День змінився, зсуваємо завтра->сьогодні`);
+    usersDb.shiftScheduleToToday(user.id);
+    
+    // Update user object for current check
+    user.schedule_hash_today = user.schedule_hash_tomorrow;
+    user.last_published_date_today = user.last_published_date_tomorrow;
+    user.schedule_hash_tomorrow = null;
+    user.last_published_date_tomorrow = null;
+    
+    return true;
+  }
+  
+  return false;
+}
+
+// Determine what changed and what to publish
+function determinePublicationScenario(user, todayHash, tomorrowHash, todayDateStr, tomorrowDateStr) {
+  const todayIsNew = !user.schedule_hash_today;
+  const todayChanged = user.schedule_hash_today && user.schedule_hash_today !== todayHash;
+  const todayUnchanged = user.schedule_hash_today === todayHash;
+  
+  const tomorrowIsNew = !user.schedule_hash_tomorrow && tomorrowHash;
+  const tomorrowChanged = user.schedule_hash_tomorrow && user.schedule_hash_tomorrow !== tomorrowHash;
+  const tomorrowUnchanged = user.schedule_hash_tomorrow === tomorrowHash;
+  
+  // CRITICAL: Do not publish if nothing changed
+  if (todayUnchanged && (tomorrowUnchanged || !tomorrowHash)) {
+    return { shouldPublish: false, reason: 'Графіки не змінилися' };
+  }
+  
+  // Determine scenarios according to requirements
+  let scenario = null;
+  
+  if (todayIsNew && !tomorrowHash) {
+    // Scenario 6.1: First publication of today's schedule (no tomorrow data)
+    scenario = 'today_first';
+  } else if (todayIsNew && tomorrowHash) {
+    // First publication but we have tomorrow data too
+    scenario = 'today_first_with_tomorrow';
+  } else if (todayChanged && !tomorrowChanged && !tomorrowIsNew) {
+    // Scenario 6.2: Today's schedule updated (tomorrow unchanged or doesn't exist)
+    scenario = 'today_updated';
+  } else if (tomorrowIsNew && todayUnchanged) {
+    // Scenario 6.3: Tomorrow's schedule appeared for the first time, today unchanged
+    scenario = 'tomorrow_appeared';
+  } else if (tomorrowChanged && todayUnchanged) {
+    // Tomorrow changed but today unchanged
+    scenario = 'tomorrow_updated';
+  } else if (tomorrowIsNew && todayChanged) {
+    // Both tomorrow appeared AND today changed
+    scenario = 'both_changed';
+  } else if (todayChanged && tomorrowChanged) {
+    // Both changed
+    scenario = 'both_changed';
+  } else if (todayChanged) {
+    // Only today changed
+    scenario = 'today_updated';
+  } else if (tomorrowChanged) {
+    // Only tomorrow changed
+    scenario = 'tomorrow_updated';
+  } else if (tomorrowIsNew) {
+    // Tomorrow is new
+    scenario = 'tomorrow_appeared';
+  }
+  
+  return {
+    shouldPublish: scenario !== null,
+    scenario,
+    todayIsNew,
+    todayChanged,
+    todayUnchanged,
+    tomorrowIsNew,
+    tomorrowChanged,
+    tomorrowUnchanged
+  };
+}
+
+// Format message according to scenario
+function formatScheduleNotification(scenario, todayEvents, tomorrowEvents, region, queue, user) {
+  const { REGIONS } = require('./constants/regions');
+  const { formatTime, formatDurationFromMs } = require('./utils');
+  
+  const now = new Date();
+  const todayDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrowDate = new Date(todayDate);
+  tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+  
+  const todayDayName = DAY_NAMES[todayDate.getDay()];
+  const tomorrowDayName = DAY_NAMES[tomorrowDate.getDay()];
+  
+  const todayDateStr = `${String(todayDate.getDate()).padStart(2, '0')}.${String(todayDate.getMonth() + 1).padStart(2, '0')}.${todayDate.getFullYear()}`;
+  const tomorrowDateStr = `${String(tomorrowDate.getDate()).padStart(2, '0')}.${String(tomorrowDate.getMonth() + 1).padStart(2, '0')}.${tomorrowDate.getFullYear()}`;
+  
+  const lines = [];
+  
+  // Helper to format event list
+  const formatEvents = (events) => {
+    const eventLines = [];
+    let totalMinutes = 0;
+    
+    events.forEach(event => {
+      const start = formatTime(event.start);
+      const end = formatTime(event.end);
+      const durationMs = new Date(event.end) - new Date(event.start);
+      const durationStr = formatDurationFromMs(durationMs);
+      totalMinutes += durationMs / 60000;
+      eventLines.push(`🪫 ${start} - ${end} (~${durationStr})`);
+    });
+    
+    // Add total duration
+    const totalHours = Math.floor(totalMinutes / 60);
+    const totalMins = Math.round(totalMinutes % 60);
+    let totalStr = '';
+    if (totalHours > 0) {
+      totalStr = `${totalHours} год`;
+      if (totalMins > 0) totalStr += ` ${totalMins} хв`;
+    } else {
+      totalStr = `${totalMins} хв`;
+    }
+    eventLines.push(`\nЗагалом без світла: ~${totalStr}`);
+    
+    return eventLines.join('\n');
+  };
+  
+  // Format based on scenario
+  switch (scenario) {
+    case 'today_first':
+    case 'today_first_with_tomorrow':
+      // Scenario 6.1: First publication of today's schedule
+      lines.push(`📊 Графік відключень на сьогодні, ${todayDateStr} (${todayDayName}), для черги ${queue}:`);
+      lines.push('');
+      if (todayEvents.length > 0) {
+        lines.push(formatEvents(todayEvents));
+      } else {
+        lines.push('✅ Відключень не заплановано');
+      }
+      
+      // If we also have tomorrow data, add it
+      if (scenario === 'today_first_with_tomorrow' && tomorrowEvents && tomorrowEvents.length > 0) {
+        lines.push('');
+        lines.push('─────────────────');
+        lines.push('');
+        lines.push(`💡 Зʼявився графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+        lines.push('');
+        lines.push(formatEvents(tomorrowEvents));
+      }
+      break;
+      
+    case 'today_updated':
+      // Scenario 6.2: Today's schedule updated
+      lines.push(`💡 Оновлено графік відключень на сьогодні, ${todayDateStr} (${todayDayName}), для черги ${queue}:`);
+      lines.push('');
+      if (todayEvents.length > 0) {
+        lines.push(formatEvents(todayEvents));
+      } else {
+        lines.push('✅ Відключень не заплановано');
+      }
+      break;
+      
+    case 'tomorrow_appeared':
+      // Scenario 6.3: Tomorrow's schedule appeared for first time
+      lines.push(`💡 Зʼявився графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+      lines.push('');
+      if (tomorrowEvents.length > 0) {
+        lines.push(formatEvents(tomorrowEvents));
+      } else {
+        lines.push('✅ Відключень не заплановано');
+      }
+      lines.push('');
+      lines.push('─────────────────');
+      lines.push('');
+      lines.push('💡 Графік на сьогодні — без змін');
+      break;
+      
+    case 'tomorrow_updated':
+      // Tomorrow updated, today unchanged (Scenario 6.4)
+      lines.push(`💡 Оновлено графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+      lines.push('');
+      if (tomorrowEvents.length > 0) {
+        lines.push(formatEvents(tomorrowEvents));
+      } else {
+        lines.push('✅ Відключень не заплановано');
+      }
+      lines.push('');
+      lines.push('─────────────────');
+      lines.push('');
+      lines.push('💡 Графік на сьогодні — без змін');
+      break;
+      
+    case 'both_changed':
+      // Both today and tomorrow changed
+      // Show tomorrow first, then today (as per requirements when both change)
+      if (tomorrowEvents && tomorrowEvents.length >= 0) {
+        lines.push(`💡 Оновлено графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+        lines.push('');
+        if (tomorrowEvents.length > 0) {
+          lines.push(formatEvents(tomorrowEvents));
+        } else {
+          lines.push('✅ Відключень не заплановано');
+        }
+        lines.push('');
+        lines.push('─────────────────');
+        lines.push('');
+      }
+      
+      lines.push(`💡 Оновлено графік відключень на сьогодні, ${todayDateStr} (${todayDayName}), для черги ${queue}:`);
+      lines.push('');
+      if (todayEvents.length > 0) {
+        lines.push(formatEvents(todayEvents));
+      } else {
+        lines.push('✅ Відключень не заплановано');
+      }
+      break;
+      
+    default:
+      return null;
+  }
+  
+  return lines.join('\n');
+}
 
 // Ініціалізація планувальника
 function initScheduler(botInstance) {
@@ -85,48 +354,71 @@ async function checkUserSchedule(user, data) {
       return;
     }
     
-    const queueKey = `GPV${user.queue}`;
+    // Handle day transition
+    handleDayTransition(user);
     
-    // Отримуємо timestamps для сьогодні та завтра
-    const availableTimestamps = Object.keys(data?.fact?.data || {}).map(Number).sort((a, b) => a - b);
-    const todayTimestamp = availableTimestamps[0] || null;
-    const tomorrowTimestamp = availableTimestamps.length > 1 ? availableTimestamps[1] : null;
-    
-    const newHash = calculateHash(data, queueKey, todayTimestamp, tomorrowTimestamp);
-    
-    // Перевіряємо чи хеш змінився з останньої перевірки
-    const hasChanged = newHash !== user.last_hash;
-    
-    // ВАЖЛИВО: Якщо хеш не змінився - нічого не робимо (запобігає дублікатам при перезапуску)
-    if (!hasChanged) {
-      return;
-    }
-    
-    // Перевіряємо чи графік вже опублікований з цим хешем
-    if (newHash === user.last_published_hash) {
-      // Оновлюємо last_hash для синхронізації
-      usersDb.updateUserHash(user.id, newHash);
-      return;
-    }
-    
-    // Парсимо графік
+    // Parse schedule data
     const scheduleData = parseScheduleForQueue(data, user.queue);
-    const nextEvent = findNextEvent(scheduleData);
     
-    // Отримуємо налаштування куди публікувати
+    if (!scheduleData.hasData) {
+      console.log(`[${user.telegram_id}] Немає даних графіка`);
+      return;
+    }
+    
+    // Split events by day
+    const { todayEvents, tomorrowEvents } = splitEventsByDay(scheduleData.events);
+    
+    // Calculate hashes for today and tomorrow
+    const todayHash = calculateSchedulePeriodsHash(todayEvents);
+    const tomorrowHash = calculateSchedulePeriodsHash(tomorrowEvents);
+    
+    // Get current date strings
+    const now = new Date();
+    const todayDateStr = getDateString(now);
+    const tomorrowDate = new Date(now);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowDateStr = getDateString(tomorrowDate);
+    
+    // Determine what to publish
+    const decision = determinePublicationScenario(
+      user,
+      todayHash,
+      tomorrowHash,
+      todayDateStr,
+      tomorrowDateStr
+    );
+    
+    if (!decision.shouldPublish) {
+      console.log(`[${user.telegram_id}] ${decision.reason}`);
+      return;
+    }
+    
+    console.log(`[${user.telegram_id}] Публікуємо: ${decision.scenario}`);
+    
+    // Format message
+    const message = formatScheduleNotification(
+      decision.scenario,
+      todayEvents,
+      tomorrowEvents,
+      user.region,
+      user.queue,
+      user
+    );
+    
+    if (!message) {
+      console.log(`[${user.telegram_id}] Не вдалося сформувати повідомлення`);
+      return;
+    }
+    
+    // Get notification target setting
     const notifyTarget = user.power_notify_target || 'both';
     
-    console.log(`[${user.telegram_id}] Графік оновлено, публікуємо (target: ${notifyTarget})`);
-    
-    // Відправляємо в особистий чат користувача
+    // Send to user's personal chat
     if (notifyTarget === 'bot' || notifyTarget === 'both') {
       try {
-        const { formatScheduleMessage } = require('./formatter');
         const { fetchScheduleImage } = require('./api');
         
-        const message = formatScheduleMessage(user.region, user.queue, scheduleData, nextEvent);
-        
-        // Спробуємо з фото
+        // Try with photo
         try {
           const imageBuffer = await fetchScheduleImage(user.region, user.queue);
           await bot.sendPhoto(user.telegram_id, imageBuffer, {
@@ -134,7 +426,7 @@ async function checkUserSchedule(user, data) {
             parse_mode: 'HTML'
           }, { filename: 'schedule.png', contentType: 'image/png' });
         } catch (imgError) {
-          // Без фото
+          // Without photo
           await bot.sendMessage(user.telegram_id, message, { parse_mode: 'HTML' });
         }
         
@@ -144,20 +436,67 @@ async function checkUserSchedule(user, data) {
       }
     }
     
-    // Відправляємо в канал
+    // Send to channel
     if (user.channel_id && (notifyTarget === 'channel' || notifyTarget === 'both')) {
-      try {
-        const { publishScheduleWithPhoto } = require('./publisher');
-        const sentMsg = await publishScheduleWithPhoto(bot, user, user.region, user.queue);
-        usersDb.updateUserPostId(user.id, sentMsg.message_id);
-        console.log(`📢 Графік опубліковано в канал ${user.channel_id}`);
-      } catch (channelError) {
-        console.error(`Не вдалося відправити в канал ${user.channel_id}:`, channelError.message);
+      // Check if channel is paused
+      if (user.channel_paused) {
+        console.log(`Канал користувача ${user.telegram_id} зупинено, пропускаємо публікацію в канал`);
+      } else {
+        try {
+          const { fetchScheduleImage } = require('./api');
+          
+          // Delete previous schedule message if delete_old_message is enabled
+          if (user.delete_old_message && user.last_schedule_message_id) {
+            try {
+              await bot.deleteMessage(user.channel_id, user.last_schedule_message_id);
+              console.log(`Видалено попереднє повідомлення ${user.last_schedule_message_id} з каналу ${user.channel_id}`);
+            } catch (deleteError) {
+              console.log(`Не вдалося видалити попереднє повідомлення: ${deleteError.message}`);
+            }
+          }
+          
+          let sentMessage;
+          
+          // Try with photo
+          try {
+            const imageBuffer = await fetchScheduleImage(user.region, user.queue);
+            
+            if (user.picture_only) {
+              // Send only photo without caption
+              sentMessage = await bot.sendPhoto(user.channel_id, imageBuffer, {}, 
+                { filename: 'schedule.png', contentType: 'image/png' });
+            } else {
+              // Send photo with caption
+              sentMessage = await bot.sendPhoto(user.channel_id, imageBuffer, {
+                caption: message,
+                parse_mode: 'HTML'
+              }, { filename: 'schedule.png', contentType: 'image/png' });
+            }
+          } catch (imgError) {
+            // Without photo
+            sentMessage = await bot.sendMessage(user.channel_id, message, { parse_mode: 'HTML' });
+          }
+          
+          // Save the message_id for potential deletion later
+          if (sentMessage && sentMessage.message_id) {
+            usersDb.updateLastScheduleMessageId(user.telegram_id, sentMessage.message_id);
+          }
+          
+          console.log(`📢 Графік опубліковано в канал ${user.channel_id}`);
+        } catch (channelError) {
+          console.error(`Не вдалося відправити в канал ${user.channel_id}:`, channelError.message);
+        }
       }
     }
     
-    // Оновлюємо хеші після публікації
-    usersDb.updateUserHashes(user.id, newHash);
+    // Update hashes after successful publication
+    usersDb.updateUserScheduleHashes(
+      user.id,
+      todayHash,
+      tomorrowHash,
+      todayDateStr,
+      tomorrowDateStr
+    );
     
   } catch (error) {
     console.error(`Помилка checkUserSchedule для користувача ${user.telegram_id}:`, error);
