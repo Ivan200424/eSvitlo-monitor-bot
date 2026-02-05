@@ -288,7 +288,7 @@ function getIpMonitoringKeyboard() {
     reply_markup: {
       inline_keyboard: [
         [{ text: 'ℹ️ Інструкція', callback_data: 'ip_instruction' }],
-        [{ text: '✚ Налаштувати IP', callback_data: 'ip_setup' }],
+        [{ text: '✚ Підключити IP', callback_data: 'ip_setup' }],
         [{ text: '📋 Показати поточний', callback_data: 'ip_show' }],
         [{ text: '🗑️ Видалити IP', callback_data: 'ip_delete' }],
         [
