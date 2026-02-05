@@ -24,15 +24,14 @@ function splitEventsByDay(events) {
   const now = new Date();
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayEnd = new Date(todayStart);
-  todayEnd.setDate(todayEnd.getDate() + 1);
-  todayEnd.setMilliseconds(-1);
+  todayEnd.setHours(23, 59, 59, 999);
   
   const tomorrowStart = new Date(todayStart);
   tomorrowStart.setDate(tomorrowStart.getDate() + 1);
   const tomorrowEnd = new Date(tomorrowStart);
-  tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
-  tomorrowEnd.setMilliseconds(-1);
+  tomorrowEnd.setHours(23, 59, 59, 999);
   
+  // Events are always within day boundaries (see parser.js), so we only check start time
   const todayEvents = events.filter(event => {
     const eventStart = new Date(event.start);
     return eventStart >= todayStart && eventStart <= todayEnd;
@@ -167,7 +166,7 @@ function formatScheduleNotification(scenario, todayEvents, tomorrowEvents, regio
     
     // Add total duration
     const totalHours = Math.floor(totalMinutes / 60);
-    const totalMins = Math.round(totalMinutes % 60);
+    const totalMins = Math.floor(totalMinutes % 60);
     let totalStr = '';
     if (totalHours > 0) {
       totalStr = `${totalHours} год`;
@@ -248,14 +247,10 @@ function formatScheduleNotification(scenario, todayEvents, tomorrowEvents, regio
     case 'both_changed':
       // Both today and tomorrow changed
       // Show tomorrow first, then today (as per requirements when both change)
-      if (tomorrowEvents && tomorrowEvents.length >= 0) {
+      if (tomorrowEvents && tomorrowEvents.length > 0) {
         lines.push(`💡 Оновлено графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
         lines.push('');
-        if (tomorrowEvents.length > 0) {
-          lines.push(formatEvents(tomorrowEvents));
-        } else {
-          lines.push('✅ Відключень не заплановано');
-        }
+        lines.push(formatEvents(tomorrowEvents));
         lines.push('');
         lines.push('─────────────────');
         lines.push('');

@@ -45,7 +45,7 @@ function calculateSchedulePeriodsHash(events) {
       }))
       .sort((a, b) => a.start.localeCompare(b.start));
     
-    return crypto.createHash('md5').update(JSON.stringify(periods)).digest('hex');
+    return crypto.createHash('sha256').update(JSON.stringify(periods)).digest('hex');
   } catch (error) {
     console.error('Помилка обчислення хешу періодів:', error.message);
     return null;
