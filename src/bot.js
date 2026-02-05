@@ -32,6 +32,9 @@ const { safeEditMessageText } = require('./utils/errorHandler');
 // Store pending channel connections
 const pendingChannels = new Map();
 
+// Store channel instruction message IDs (для видалення старих інструкцій)
+const channelInstructionMessages = new Map();
+
 // Автоочистка застарілих записів з pendingChannels (кожну годину)
 setInterval(() => {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;
@@ -761,7 +764,7 @@ bot.on('my_chat_member', async (update) => {
     const chat = update.chat;
     const newStatus = update.new_chat_member.status;
     const oldStatus = update.old_chat_member.status;
-    const userId = update.from.id; // User who added the bot
+    const userId = String(update.from.id); // User who added the bot (convert to String for consistency)
     
     // Перевіряємо що це канал
     if (chat.type !== 'channel') return;
@@ -793,7 +796,7 @@ bot.on('my_chat_member', async (update) => {
       
       // Перевіряємо чи канал вже зайнятий іншим користувачем
       const existingUser = usersDb.getUserByChannelId(channelId);
-      if (existingUser && existingUser.telegram_id !== String(userId)) {
+      if (existingUser && existingUser.telegram_id !== userId) {
         // Канал вже зайнятий - повідомляємо користувача
         console.log(`Channel ${channelId} already connected to user ${existingUser.telegram_id}`);
         
@@ -812,8 +815,21 @@ bot.on('my_chat_member', async (update) => {
         return;
       }
       
+      // Спробувати видалити старе повідомлення з інструкцією
+      // (якщо є збережений message_id)
+      const lastInstructionMessageId = channelInstructionMessages.get(userId);
+      if (lastInstructionMessageId) {
+        try {
+          await bot.deleteMessage(userId, lastInstructionMessageId);
+          channelInstructionMessages.delete(userId);
+          console.log(`Deleted instruction message ${lastInstructionMessageId} for user ${userId}`);
+        } catch (e) {
+          console.log('Could not delete instruction message:', e.message);
+        }
+      }
+      
       // Отримати користувача з БД
-      const user = usersDb.getUserByTelegramId(String(userId));
+      const user = usersDb.getUserByTelegramId(userId);
       
       if (user && user.channel_id) {
         // У користувача вже є канал - запитати про заміну
@@ -863,7 +879,7 @@ bot.on('my_chat_member', async (update) => {
         channelId,
         channelUsername,
         channelTitle: chat.title,
-        telegramId: String(userId),
+        telegramId: userId,
         timestamp: Date.now()
       });
       
@@ -874,7 +890,7 @@ bot.on('my_chat_member', async (update) => {
     if ((newStatus === 'left' || newStatus === 'kicked') && 
         (oldStatus === 'administrator' || oldStatus === 'member')) {
       
-      const user = usersDb.getUserByTelegramId(String(userId));
+      const user = usersDb.getUserByTelegramId(userId);
       
       // Перевірити чи це був підключений канал користувача
       if (user && user.channel_id === channelId) {
@@ -889,7 +905,7 @@ bot.on('my_chat_member', async (update) => {
         }
         
         // Очистити channel_id в БД
-        usersDb.updateUser(String(userId), { channel_id: null, channel_title: null });
+        usersDb.updateUser(userId, { channel_id: null, channel_title: null });
       }
     }
     
@@ -900,4 +916,5 @@ bot.on('my_chat_member', async (update) => {
 
 module.exports = bot;
 module.exports.pendingChannels = pendingChannels;
+module.exports.channelInstructionMessages = channelInstructionMessages;
 module.exports.restorePendingChannels = restorePendingChannels;

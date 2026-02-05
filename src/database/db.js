@@ -168,6 +168,7 @@ function runMigrations() {
     { name: 'alert_off_message_id', type: 'INTEGER' },
     { name: 'alert_on_message_id', type: 'INTEGER' },
     { name: 'router_ip', type: 'TEXT' },
+    { name: 'migration_notified', type: 'INTEGER DEFAULT 0' },
     { name: 'notify_before_off', type: 'INTEGER DEFAULT 15' },
     { name: 'notify_before_on', type: 'INTEGER DEFAULT 15' },
     { name: 'alerts_off_enabled', type: 'BOOLEAN DEFAULT 1' },
