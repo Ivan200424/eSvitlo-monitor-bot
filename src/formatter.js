@@ -448,6 +448,170 @@ function formatErrorMessage() {
   return lines.join('\n');
 }
 
+// Форматувати повідомлення про графік відповідно до нової логіки публікації
+function formatScheduleMessageNew(region, queue, todayEvents, tomorrowEvents, updateContext) {
+  const { REGIONS } = require('./constants/regions');
+  const regionName = REGIONS[region]?.name || region;
+  const lines = [];
+  
+  const now = new Date();
+  const dayNames = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
+  
+  // Функція для форматування дати
+  const formatDateStr = (date) => {
+    const d = new Date(date);
+    return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`;
+  };
+  
+  // Функція для форматування блоку відключень
+  const formatEventsBlock = (events) => {
+    const eventLines = [];
+    let totalMinutes = 0;
+    
+    events.forEach(event => {
+      const start = formatTime(event.start);
+      const end = formatTime(event.end);
+      const durationMs = new Date(event.end) - new Date(event.start);
+      const durationStr = formatDurationFromMs(durationMs);
+      totalMinutes += durationMs / 60000;
+      eventLines.push(`🪫 ${start} - ${end} (~${durationStr})`);
+    });
+    
+    // Додаємо загальну тривалість
+    const totalHours = Math.floor(totalMinutes / 60);
+    const totalMins = Math.round(totalMinutes % 60);
+    let totalStr = '';
+    if (totalHours > 0) {
+      totalStr = `${totalHours} год`;
+      if (totalMins > 0) totalStr += ` ${totalMins} хв`;
+    } else {
+      totalStr = `${totalMins} хв`;
+    }
+    eventLines.push(`Загалом без світла: ~${totalStr}`);
+    
+    return eventLines;
+  };
+  
+  // Визначаємо дати
+  const todayDateObj = new Date(updateContext.todayDate);
+  const tomorrowDateObj = new Date(updateContext.tomorrowDate);
+  const todayDateStr = formatDateStr(todayDateObj);
+  const tomorrowDateStr = formatDateStr(tomorrowDateObj);
+  const todayDayName = dayNames[todayDateObj.getDay()];
+  const tomorrowDayName = dayNames[tomorrowDateObj.getDay()];
+  
+  // Сценарій 1: Перша публікація графіка на сьогодні
+  if (updateContext.todayFirstAppearance && !updateContext.tomorrowChanged) {
+    lines.push(`📊 Графік відключень на сьогодні, ${todayDateStr} (${todayDayName}), для черги ${queue}:`);
+    lines.push('');
+    
+    if (todayEvents.length > 0) {
+      lines.push(...formatEventsBlock(todayEvents));
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
+    
+    return lines.join('\n');
+  }
+  
+  // Сценарій 2: Оновився графік на сьогодні (без змін на завтра)
+  if (updateContext.todayChanged && !updateContext.tomorrowChanged && 
+      updateContext.todayDate === updateContext.todayDate) {
+    lines.push(`💡 Оновлено графік відключень на сьогодні, ${todayDateStr} (${todayDayName}), для черги ${queue}:`);
+    lines.push('');
+    
+    if (todayEvents.length > 0) {
+      lines.push(...formatEventsBlock(todayEvents));
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
+    
+    return lines.join('\n');
+  }
+  
+  // Сценарій 3: Вперше з'явився графік на завтра
+  if (updateContext.tomorrowFirstAppearance && !updateContext.todayChanged) {
+    // Тільки завтра з'явився
+    lines.push(`💡 Зʼявився графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+    lines.push('');
+    
+    if (tomorrowEvents.length > 0) {
+      lines.push(...formatEventsBlock(tomorrowEvents));
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
+    
+    return lines.join('\n');
+  }
+  
+  // Сценарій 4: Графік на завтра оновився, а графік на сьогодні без змін
+  if (updateContext.tomorrowChanged && updateContext.todayUnchanged) {
+    // Блок 1: Завтра
+    if (updateContext.tomorrowFirstAppearance) {
+      lines.push(`💡 Зʼявився графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+    } else {
+      lines.push(`💡 Оновлено графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+    }
+    lines.push('');
+    
+    if (tomorrowEvents.length > 0) {
+      lines.push(...formatEventsBlock(tomorrowEvents));
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
+    
+    lines.push('');
+    
+    // Блок 2: Сьогодні без змін
+    lines.push(`💡 Графік на сьогодні — без змін:`);
+    lines.push('');
+    
+    if (todayEvents.length > 0) {
+      lines.push(...formatEventsBlock(todayEvents));
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
+    
+    return lines.join('\n');
+  }
+  
+  // Сценарій 5: Обидва графіки змінились
+  if (updateContext.todayChanged && updateContext.tomorrowChanged) {
+    // Показуємо завтра першим
+    if (tomorrowEvents.length > 0) {
+      if (updateContext.tomorrowFirstAppearance) {
+        lines.push(`💡 Зʼявився графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+      } else {
+        lines.push(`💡 Оновлено графік відключень на завтра, ${tomorrowDateStr} (${tomorrowDayName}), для черги ${queue}:`);
+      }
+      lines.push('');
+      lines.push(...formatEventsBlock(tomorrowEvents));
+      lines.push('');
+    }
+    
+    // Потім сьогодні
+    lines.push(`💡 Оновлено графік на сьогодні:`);
+    lines.push('');
+    
+    if (todayEvents.length > 0) {
+      lines.push(...formatEventsBlock(todayEvents));
+    } else {
+      lines.push('✅ Відключень не заплановано');
+    }
+    
+    return lines.join('\n');
+  }
+  
+  // Fallback: стандартне форматування
+  if (todayEvents.length > 0) {
+    lines.push(`📊 Графік відключень на сьогодні, ${todayDateStr} (${todayDayName}), для черги ${queue}:`);
+    lines.push('');
+    lines.push(...formatEventsBlock(todayEvents));
+  }
+  
+  return lines.join('\n');
+}
+
 module.exports = {
   formatScheduleMessage,
   formatNextEventMessage,
@@ -461,4 +625,5 @@ module.exports = {
   formatTemplate,
   getCurrentDateTimeForTemplate,
   formatErrorMessage,
+  formatScheduleMessageNew,
 };
