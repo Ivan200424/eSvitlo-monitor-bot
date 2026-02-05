@@ -196,7 +196,11 @@ function runMigrations() {
     { name: 'last_settings_message_id', type: 'INTEGER' },
     { name: 'last_timer_message_id', type: 'INTEGER' },
     { name: 'channel_branding_updated_at', type: 'DATETIME' },
-    { name: 'last_menu_message_id', type: 'INTEGER' }
+    { name: 'last_menu_message_id', type: 'INTEGER' },
+    { name: 'schedule_hash_today', type: 'TEXT' },
+    { name: 'schedule_hash_tomorrow', type: 'TEXT' },
+    { name: 'last_published_date_today', type: 'TEXT' },
+    { name: 'last_published_date_tomorrow', type: 'TEXT' }
   ];
   
   let addedCount = 0;

@@ -28,6 +28,30 @@ function calculateHash(data, queueKey, todayTimestamp, tomorrowTimestamp) {
   }
 }
 
+// Обчислити хеш тільки з періодів відключень (час початку та завершення)
+// Використовується для порівняння графіків згідно з новою логікою публікації
+function calculateScheduleHash(events) {
+  try {
+    if (!events || events.length === 0) {
+      return null;
+    }
+    
+    // Створюємо масив з тільки часів початку та завершення
+    const periods = events.map(event => ({
+      start: event.start,
+      end: event.end
+    }));
+    
+    // Сортуємо для стабільності хешу
+    periods.sort((a, b) => new Date(a.start) - new Date(b.start));
+    
+    return crypto.createHash('sha256').update(JSON.stringify(periods)).digest('hex');
+  } catch (error) {
+    console.error('Помилка обчислення хешу графіка:', error.message);
+    return null;
+  }
+}
+
 // Форматувати час для відображення
 function formatTime(date) {
   if (!date) return 'невідомо';
@@ -346,6 +370,7 @@ function getChannelConnectionInstructions(botUsername) {
 
 module.exports = {
   calculateHash,
+  calculateScheduleHash,
   formatTime,
   formatDate,
   formatDateTime,

@@ -85,46 +85,103 @@ async function checkUserSchedule(user, data) {
       return;
     }
     
-    const queueKey = `GPV${user.queue}`;
-    
-    // Отримуємо timestamps для сьогодні та завтра
-    const availableTimestamps = Object.keys(data?.fact?.data || {}).map(Number).sort((a, b) => a - b);
-    const todayTimestamp = availableTimestamps[0] || null;
-    const tomorrowTimestamp = availableTimestamps.length > 1 ? availableTimestamps[1] : null;
-    
-    const newHash = calculateHash(data, queueKey, todayTimestamp, tomorrowTimestamp);
-    
-    // Перевіряємо чи хеш змінився з останньої перевірки
-    const hasChanged = newHash !== user.last_hash;
-    
-    // ВАЖЛИВО: Якщо хеш не змінився - нічого не робимо (запобігає дублікатам при перезапуску)
-    if (!hasChanged) {
-      return;
-    }
-    
-    // Перевіряємо чи графік вже опублікований з цим хешем
-    if (newHash === user.last_published_hash) {
-      // Оновлюємо last_hash для синхронізації
-      usersDb.updateUserHash(user.id, newHash);
-      return;
-    }
+    const { calculateScheduleHash } = require('./utils');
+    const { parseScheduleForQueue, findNextEvent } = require('./parser');
     
     // Парсимо графік
     const scheduleData = parseScheduleForQueue(data, user.queue);
-    const nextEvent = findNextEvent(scheduleData);
+    
+    // Розділяємо події на сьогодні та завтра
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayEnd = new Date(todayStart);
+    todayEnd.setDate(todayEnd.getDate() + 1);
+    todayEnd.setMilliseconds(-1);
+    
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+    const tomorrowEnd = new Date(tomorrowStart);
+    tomorrowEnd.setDate(tomorrowEnd.getDate() + 1);
+    tomorrowEnd.setMilliseconds(-1);
+    
+    // Фільтруємо події
+    const todayEvents = scheduleData.events ? scheduleData.events.filter(event => {
+      const eventStart = new Date(event.start);
+      return eventStart >= todayStart && eventStart <= todayEnd;
+    }) : [];
+    
+    const tomorrowEvents = scheduleData.events ? scheduleData.events.filter(event => {
+      const eventStart = new Date(event.start);
+      return eventStart >= tomorrowStart && eventStart <= tomorrowEnd;
+    }) : [];
+    
+    // Обчислюємо хеші тільки з періодів відключень
+    const newHashToday = calculateScheduleHash(todayEvents);
+    const newHashTomorrow = calculateScheduleHash(tomorrowEvents);
+    
+    // Поточна дата в форматі YYYY-MM-DD
+    const currentDate = todayStart.toISOString().split('T')[0];
+    const tomorrowDate = tomorrowStart.toISOString().split('T')[0];
+    
+    // КРИТИЧНО: Перевірка переходу календарного дня
+    // Якщо last_published_date_today не дорівнює поточній даті, відбувся перехід дня
+    const dayTransitioned = user.last_published_date_today && 
+                           user.last_published_date_today !== currentDate;
+    
+    if (dayTransitioned) {
+      // Перехід дня: завтрашній стає сьогоднішнім
+      console.log(`[${user.telegram_id}] Перехід календарного дня: ${user.last_published_date_today} → ${currentDate}`);
+      usersDb.transitionScheduleDay(user.id);
+      
+      // Оновлюємо локальний об'єкт користувача
+      user.schedule_hash_today = user.schedule_hash_tomorrow;
+      user.last_published_date_today = user.last_published_date_tomorrow;
+      user.schedule_hash_tomorrow = null;
+      user.last_published_date_tomorrow = null;
+    }
+    
+    // Визначаємо чи є зміни
+    const todayChanged = newHashToday !== user.schedule_hash_today;
+    const tomorrowChanged = newHashTomorrow !== user.schedule_hash_tomorrow;
+    
+    // Визначаємо чи це перша поява графіків
+    const todayFirstAppearance = user.schedule_hash_today === null && newHashToday !== null;
+    const tomorrowFirstAppearance = user.schedule_hash_tomorrow === null && newHashTomorrow !== null;
+    
+    // ЗАБОРОНА: якщо жоден хеш не змінився, не публікуємо
+    if (!todayChanged && !tomorrowChanged) {
+      return;
+    }
+    
+    console.log(`[${user.telegram_id}] Зміни графіка: today=${todayChanged}, tomorrow=${tomorrowChanged}`);
+    
+    // Визначаємо тип оновлення для форматування повідомлення
+    const updateContext = {
+      todayChanged,
+      tomorrowChanged,
+      todayFirstAppearance,
+      tomorrowFirstAppearance,
+      todayUnchanged: !todayChanged,
+      todayDate: currentDate,
+      tomorrowDate: tomorrowDate
+    };
     
     // Отримуємо налаштування куди публікувати
     const notifyTarget = user.power_notify_target || 'both';
     
-    console.log(`[${user.telegram_id}] Графік оновлено, публікуємо (target: ${notifyTarget})`);
-    
     // Відправляємо в особистий чат користувача
     if (notifyTarget === 'bot' || notifyTarget === 'both') {
       try {
-        const { formatScheduleMessage } = require('./formatter');
+        const { formatScheduleMessageNew } = require('./formatter');
         const { fetchScheduleImage } = require('./api');
         
-        const message = formatScheduleMessage(user.region, user.queue, scheduleData, nextEvent);
+        const message = formatScheduleMessageNew(
+          user.region, 
+          user.queue, 
+          todayEvents, 
+          tomorrowEvents, 
+          updateContext
+        );
         
         // Спробуємо з фото
         try {
@@ -147,17 +204,33 @@ async function checkUserSchedule(user, data) {
     // Відправляємо в канал
     if (user.channel_id && (notifyTarget === 'channel' || notifyTarget === 'both')) {
       try {
-        const { publishScheduleWithPhoto } = require('./publisher');
-        const sentMsg = await publishScheduleWithPhoto(bot, user, user.region, user.queue);
-        usersDb.updateUserPostId(user.id, sentMsg.message_id);
+        const { publishScheduleWithPhotoNew } = require('./publisher');
+        const sentMsg = await publishScheduleWithPhotoNew(
+          bot, 
+          user, 
+          user.region, 
+          user.queue, 
+          todayEvents, 
+          tomorrowEvents, 
+          updateContext
+        );
+        if (sentMsg && sentMsg.message_id) {
+          usersDb.updateUserPostId(user.id, sentMsg.message_id);
+        }
         console.log(`📢 Графік опубліковано в канал ${user.channel_id}`);
       } catch (channelError) {
         console.error(`Не вдалося відправити в канал ${user.channel_id}:`, channelError.message);
       }
     }
     
-    // Оновлюємо хеші після публікації
-    usersDb.updateUserHashes(user.id, newHash);
+    // Оновлюємо стан графіків після публікації
+    usersDb.updateScheduleState(
+      user.id,
+      newHashToday,
+      newHashTomorrow,
+      currentDate,
+      tomorrowDate
+    );
     
   } catch (error) {
     console.error(`Помилка checkUserSchedule для користувача ${user.telegram_id}:`, error);

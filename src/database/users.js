@@ -633,6 +633,38 @@ function updateUser(telegramId, updates) {
   return result.changes > 0;
 }
 
+// Оновити хеші графіків та дати публікації для нової логіки
+function updateScheduleState(userId, todayHash, tomorrowHash, todayDate, tomorrowDate) {
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET schedule_hash_today = ?,
+        schedule_hash_tomorrow = ?,
+        last_published_date_today = ?,
+        last_published_date_tomorrow = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  
+  const result = stmt.run(todayHash, tomorrowHash, todayDate, tomorrowDate, userId);
+  return result.changes > 0;
+}
+
+// Виконати перехід дня (завтрашній стає сьогоднішнім)
+function transitionScheduleDay(userId) {
+  const stmt = db.prepare(`
+    UPDATE users 
+    SET schedule_hash_today = schedule_hash_tomorrow,
+        last_published_date_today = last_published_date_tomorrow,
+        schedule_hash_tomorrow = NULL,
+        last_published_date_tomorrow = NULL,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = ?
+  `);
+  
+  const result = stmt.run(userId);
+  return result.changes > 0;
+}
+
 module.exports = {
   createUser,
   getUserByTelegramId,
@@ -673,4 +705,6 @@ module.exports = {
   updateScheduleAlertTarget,
   updateUserScheduleAlertSettings,
   updateUser,
+  updateScheduleState,
+  transitionScheduleDay,
 };
