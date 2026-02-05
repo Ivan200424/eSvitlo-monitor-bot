@@ -130,6 +130,12 @@ function isValidIPorDomain(input) {
     return { valid: true, address: trimmed, host, port, type: 'ip' };
   }
   
+  // Перевірка чи це не неповна IP-адреса (наприклад, 192.168.1)
+  // Якщо складається ТІЛЬКИ з чисел та крапок, але не 4 октети - відхиляємо
+  if (/^\d+(\.\d+)*$/.test(host) && !ipRegex.test(host)) {
+    return { valid: false, error: 'Неповна IP-адреса. IP має складатися з 4 чисел.\n\nПриклад: 192.168.1.1' };
+  }
+  
   // Перевірка доменного імені (DDNS)
   const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)+$/;
   
