@@ -85,6 +85,13 @@ const PHOTO_PATH = path.join(__dirname, '../../photo_for_channels.PNG.jpg');
 const PENDING_CHANNEL_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes
 const FORMAT_SETTINGS_MESSAGE = '📋 <b>Формат публікацій</b>\n\nНалаштуйте формат повідомлень для вашого каналу:';
 
+// Validation error types
+const VALIDATION_ERROR_TYPES = {
+  OCCUPIED: 'occupied',
+  PERMISSIONS: 'permissions',
+  API_ERROR: 'api_error'
+};
+
 // Helper function: Validate channel ownership and bot permissions
 async function validateChannelConnection(bot, channelId, telegramId) {
   // Перевірка чи канал вже зайнятий іншим користувачем
@@ -92,7 +99,7 @@ async function validateChannelConnection(bot, channelId, telegramId) {
   if (existingUser && existingUser.telegram_id !== telegramId) {
     return {
       valid: false,
-      error: 'occupied',
+      error: VALIDATION_ERROR_TYPES.OCCUPIED,
       message: `⚠️ <b>Цей канал вже підключений.</b>\n\n` +
                `Якщо це ваш канал — зверніться до підтримки.`
     };
@@ -110,7 +117,7 @@ async function validateChannelConnection(bot, channelId, telegramId) {
     if (botMember.status !== 'administrator' || !botMember.can_post_messages || !botMember.can_change_info) {
       return {
         valid: false,
-        error: 'permissions',
+        error: VALIDATION_ERROR_TYPES.PERMISSIONS,
         message: '❌ <b>Недостатньо прав</b>\n\n' +
                  'Бот повинен мати права на:\n' +
                  '• Публікацію повідомлень\n' +
@@ -121,7 +128,7 @@ async function validateChannelConnection(bot, channelId, telegramId) {
     console.error('Error checking bot permissions:', error);
     return {
       valid: false,
-      error: 'api_error',
+      error: VALIDATION_ERROR_TYPES.API_ERROR,
       message: '😅 Щось пішло не так при перевірці прав'
     };
   }
@@ -130,14 +137,16 @@ async function validateChannelConnection(bot, channelId, telegramId) {
 }
 
 // Helper function: Remove pending channel by telegram ID
+// Returns true if a channel was removed, false otherwise
 function removePendingChannelByTelegramId(telegramId) {
   const { pendingChannels } = require('../bot');
   for (const [channelId, pending] of pendingChannels.entries()) {
     if (pending.telegramId === telegramId) {
       pendingChannels.delete(channelId);
-      break;
+      return true;
     }
   }
+  return false;
 }
 
 // Обробник команди /channel
@@ -917,7 +926,7 @@ async function handleChannelCallback(bot, query) {
               parse_mode: 'HTML'
             }
           );
-          if (validation.error === 'api_error') {
+          if (validation.error === VALIDATION_ERROR_TYPES.API_ERROR) {
             await bot.answerCallbackQuery(query.id, {
               text: validation.message,
               show_alert: true
@@ -1000,7 +1009,7 @@ async function handleChannelCallback(bot, query) {
               parse_mode: 'HTML'
             }
           );
-          if (validation.error === 'api_error') {
+          if (validation.error === VALIDATION_ERROR_TYPES.API_ERROR) {
             await bot.answerCallbackQuery(query.id, {
               text: validation.message,
               show_alert: true
