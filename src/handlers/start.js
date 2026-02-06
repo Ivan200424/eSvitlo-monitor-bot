@@ -153,6 +153,7 @@ async function handleStart(bot, msg) {
   const username = msg.from.username || msg.from.first_name;
   
   try {
+    // CRITICAL FIX: Always clear ALL pending states on /start to prevent state leaks
     // Clear any pending IP setup state
     const { clearIpSetupState } = require('./settings');
     clearIpSetupState(telegramId);
@@ -161,9 +162,11 @@ async function handleStart(bot, msg) {
     const { clearConversationState } = require('./channel');
     clearConversationState(telegramId);
     
-    // Clear wizard state if user is stuck - /start acts as reset
-    if (isInWizard(telegramId)) {
-      clearWizardState(telegramId);
+    // Clear wizard state unconditionally - /start acts as complete reset
+    const hadWizardState = isInWizard(telegramId);
+    clearWizardState(telegramId); // Always clear, even if not detected as "in wizard"
+    
+    if (hadWizardState) {
       await safeSendMessage(bot, chatId, 
         '🔄 Налаштування скинуто.\n\n' +
         'Повертаємось до головного меню...',

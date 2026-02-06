@@ -501,12 +501,49 @@ async function checkUserSchedule(user, data) {
           
           console.log(`📢 Графік опубліковано в канал ${user.channel_id}`);
         } catch (channelError) {
+          // CRITICAL FIX: Handle channel access errors properly
           console.error(`Не вдалося відправити в канал ${user.channel_id}:`, channelError.message);
+          
+          // Check if error indicates channel access lost
+          const errorMsg = channelError.message || '';
+          if (errorMsg.includes('chat not found') || 
+              errorMsg.includes('bot was blocked') ||
+              errorMsg.includes('bot was kicked') ||
+              errorMsg.includes('not enough rights') ||
+              errorMsg.includes('have no rights')) {
+            // Mark channel as blocked
+            console.log(`🚫 Канал ${user.channel_id} більше недоступний, позначаємо як заблокований`);
+            usersDb.updateUser(user.telegram_id, { channel_status: 'blocked' });
+            
+            // Notify user about channel access loss (only if notifying to bot)
+            if (notifyTarget === 'bot' || notifyTarget === 'both') {
+              try {
+                await bot.sendMessage(
+                  user.telegram_id,
+                  '⚠️ <b>Втрачено доступ до каналу</b>\n\n' +
+                  `Не вдалося опублікувати графік у канал.\n` +
+                  `Можливі причини:\n` +
+                  `• Бот видалений з каналу\n` +
+                  `• Бот втратив права адміністратора\n\n` +
+                  `Перевірте налаштування каналу в меню.`,
+                  { parse_mode: 'HTML' }
+                );
+              } catch (notifyError) {
+                console.error(`Не вдалося сповістити користувача про втрату доступу:`, notifyError.message);
+              }
+            }
+          }
         }
       }
     }
     
-    // Update hashes after successful publication
+    // CRITICAL FIX: Only update hashes after successful publication
+    // If both bot and channel publishing failed, we don't update hashes
+    // so the bot will retry on next check
+    const botPublishSuccess = (notifyTarget !== 'channel'); // true if we sent to bot or not trying to send to bot
+    const channelPublishSuccess = !user.channel_id || user.channel_paused || (notifyTarget !== 'bot'); // true if no channel or didn't try
+    
+    // Update hashes - bot will retry if publication completely failed
     usersDb.updateUserScheduleHashes(
       user.id,
       todayHash,
