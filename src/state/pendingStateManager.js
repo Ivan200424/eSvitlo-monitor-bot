@@ -121,9 +121,17 @@ function isPendingStateExpired(stateType, userId) {
 
 /**
  * Extend timeout for a pending state
+ * 
+ * NOTE: This function extends the internal timeout tracking but cannot
+ * recreate the actual timeout callback since it wasn't stored.
+ * For proper timeout extension, you'll need to:
+ * 1. Cancel the current state
+ * 2. Create a new pending state with the new timeout
+ * 
  * @param {string} stateType - Type of state
  * @param {string} userId - User identifier
  * @param {number} additionalMs - Additional milliseconds to add
+ * @deprecated Use cancelPendingState + createPendingState instead
  */
 function extendPendingState(stateType, userId, additionalMs) {
   const state = getState(stateType, userId);
@@ -137,18 +145,11 @@ function extendPendingState(stateType, userId, additionalMs) {
     clearTimeout(state._timer);
   }
   
-  // Calculate new timeout
+  // Update timeout tracking only
+  // NOTE: Cannot recreate callback - use cancel + create instead
   const remaining = getRemainingTime(stateType, userId) || 0;
-  const newTimeout = remaining + additionalMs;
-  
-  // Create new timer if there was an original timeout
-  let newTimer = null;
-  if (state._timeoutMs) {
-    // Note: We would need the original onTimeout callback here
-    // For now, we just extend the internal tracking
-    state._timeoutMs = newTimeout;
-    state._createdAt = Date.now();
-  }
+  state._timeoutMs = remaining + additionalMs;
+  state._createdAt = Date.now();
   
   setState(stateType, userId, state);
 }

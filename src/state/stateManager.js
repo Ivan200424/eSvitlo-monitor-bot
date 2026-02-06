@@ -176,9 +176,9 @@ function setState(stateType, userId, data, persist = null) {
     ? persist 
     : ['wizard', 'conversation', 'ipSetup'].includes(stateType);
   
-  // Persist to DB if needed
+  // Persist to DB if needed (persist the timestamped data for consistency)
   if (shouldPersist) {
-    saveUserState(userId, stateType, data);
+    saveUserState(userId, stateType, stateData);
   }
 }
 

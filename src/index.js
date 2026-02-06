@@ -24,12 +24,13 @@ console.log(`💾 База даних: ${config.databasePath}`);
 // Ініціалізація централізованого state manager
 initStateManager();
 
-// Відновлення станів з БД (legacy - буде мігровано до state manager)
+// Legacy state restoration calls - can be removed once state manager migration is complete
+// These are now handled by initStateManager() but kept for backward compatibility
 console.log('🔄 Відновлення станів...');
-restorePendingChannels();
-restoreWizardStates();
-restoreConversationStates();
-restoreIpSetupStates();
+restorePendingChannels(); // TODO: Migrate to state manager
+restoreWizardStates(); // Handled by state manager
+restoreConversationStates(); // Handled by state manager
+restoreIpSetupStates(); // Handled by state manager
 
 // Очистка старих станів (старше 24 годин)
 cleanupOldStates();

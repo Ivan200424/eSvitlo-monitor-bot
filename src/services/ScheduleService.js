@@ -125,18 +125,29 @@ class ScheduleService {
    * @returns {object} Map of region -> schedule data
    */
   async batchFetchSchedules(regions) {
-    const results = {};
-    
-    for (const region of regions) {
+    const promises = regions.map(async region => {
       try {
-        results[region] = await fetchScheduleData(region);
+        const data = await fetchScheduleData(region);
+        return { region, data, success: true };
       } catch (error) {
         console.error(`Error fetching schedule for ${region}:`, error.message);
-        results[region] = null;
+        return { region, data: null, success: false, error: error.message };
+      }
+    });
+    
+    const results = await Promise.allSettled(promises);
+    
+    const resultMap = {};
+    for (const result of results) {
+      if (result.status === 'fulfilled') {
+        const { region, data } = result.value;
+        resultMap[region] = data;
+      } else {
+        console.error('Unexpected promise rejection in batchFetchSchedules:', result.reason);
       }
     }
     
-    return results;
+    return resultMap;
   }
 }
 

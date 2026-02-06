@@ -100,13 +100,15 @@ class IpMonitoringService {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), timeoutMs);
       
-      const response = await fetch(`http://${host}:${port}`, {
-        signal: controller.signal,
-        method: 'HEAD'
-      });
-      
-      clearTimeout(timeout);
-      return true; // Available
+      try {
+        const response = await fetch(`http://${host}:${port}`, {
+          signal: controller.signal,
+          method: 'HEAD'
+        });
+        return true; // Available
+      } finally {
+        clearTimeout(timeout);
+      }
     } catch (error) {
       return false; // Not available
     }
