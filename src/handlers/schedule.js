@@ -64,7 +64,7 @@ async function handleSchedule(bot, msg) {
       bot, 
       chatId, 
       '🔄 Не вдалося завантажити графік. Спробуйте пізніше або зверніться до підтримки.',
-      { parse_mode: 'HTML', ...getErrorKeyboard() }
+      getErrorKeyboard()
     );
   }
 }
@@ -102,7 +102,7 @@ async function handleNext(bot, msg) {
       bot, 
       chatId, 
       '🔄 Не вдалося завантажити. Спробуйте пізніше або зверніться до підтримки.',
-      { parse_mode: 'HTML', ...getErrorKeyboard() }
+      getErrorKeyboard()
     );
   }
 }
@@ -140,7 +140,7 @@ async function handleTimer(bot, msg) {
       bot, 
       chatId, 
       '🔄 Не вдалося завантажити. Спробуйте пізніше або зверніться до підтримки.',
-      { parse_mode: 'HTML', ...getErrorKeyboard() }
+      getErrorKeyboard()
     );
   }
 }

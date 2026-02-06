@@ -191,7 +191,7 @@ async function handleChannel(bot, msg) {
       bot, 
       chatId, 
       '😅 Щось пішло не так. Спробуйте пізніше або зверніться до підтримки.',
-      { parse_mode: 'HTML', ...getErrorKeyboard() }
+      getErrorKeyboard()
     );
   }
   }
