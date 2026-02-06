@@ -54,20 +54,9 @@ async function handleStats(bot, msg) {
   }
   
   try {
-    const stats = usersDb.getUserStats();
-    
-    let message = '📊 <b>Статистика користувачів</b>\n\n';
-    message += `👥 Всього користувачів: ${stats.total}\n`;
-    message += `✅ Активних: ${stats.active}\n`;
-    message += `📺 З підключеними каналами: ${stats.withChannels}\n\n`;
-    
-    if (stats.byRegion.length > 0) {
-      message += '<b>Розподіл по регіонах:</b>\n';
-      stats.byRegion.forEach(item => {
-        const regionName = REGIONS[item.region]?.name || item.region;
-        message += `• ${regionName}: ${item.count}\n`;
-      });
-    }
+    // Use new analytics module
+    const { formatAnalytics } = require('../analytics');
+    const message = formatAnalytics();
     
     await safeSendMessage(bot, chatId, message, { parse_mode: 'HTML' });
     
@@ -242,26 +231,22 @@ async function handleAdminCallback(bot, query) {
   
   try {
     if (data === 'admin_stats') {
-      const stats = usersDb.getUserStats();
-      
-      let message = '📊 <b>Статистика користувачів</b>\n\n';
-      message += `👥 Всього користувачів: ${stats.total}\n`;
-      message += `✅ Активних: ${stats.active}\n`;
-      message += `📺 З підключеними каналами: ${stats.withChannels}\n\n`;
-      
-      if (stats.byRegion.length > 0) {
-        message += '<b>Розподіл по регіонах:</b>\n';
-        stats.byRegion.forEach(item => {
-          const regionName = REGIONS[item.region]?.name || item.region;
-          message += `• ${regionName}: ${item.count}\n`;
-        });
-      }
+      // Use new analytics module
+      const { formatAnalytics } = require('../analytics');
+      const message = formatAnalytics();
       
       await safeEditMessageText(bot, message, {
         chat_id: chatId,
         message_id: query.message.message_id,
         parse_mode: 'HTML',
-        reply_markup: getAdminKeyboard().reply_markup,
+        reply_markup: {
+          inline_keyboard: [
+            [
+              { text: '← Назад', callback_data: 'admin_menu' },
+              { text: '⤴ Меню', callback_data: 'back_to_main' }
+            ]
+          ]
+        },
       });
       await bot.answerCallbackQuery(query.id);
       return;
