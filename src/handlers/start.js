@@ -166,6 +166,8 @@ async function handleStart(bot, msg) {
     const hadWizardState = isInWizard(telegramId);
     clearWizardState(telegramId); // Always clear, even if not detected as "in wizard"
     
+    // Only show reset message if user was actively in wizard
+    // Stale states are cleaned silently to avoid confusing users
     if (hadWizardState) {
       await safeSendMessage(bot, chatId, 
         '🔄 Налаштування скинуто.\n\n' +

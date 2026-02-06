@@ -248,7 +248,7 @@ async function handlePowerStateChange(user, newState, oldState, userState, origi
               try {
                 await bot.sendMessage(
                   user.telegram_id,
-                  '\n\n⚠️ <b>Втрачено доступ до каналу</b>\n' +
+                  '⚠️ <b>Втрачено доступ до каналу</b>\n' +
                   'Не вдалося відправити сповіщення в канал.\n' +
                   'Перевірте налаштування каналу в меню.',
                   { parse_mode: 'HTML' }

@@ -312,10 +312,10 @@ function initScheduler(botInstance) {
 // Stop scheduler
 function stopScheduler() {
   if (schedulerJob) {
-    // Check if it's a cron job (has destroy method) or setInterval (numeric ID)
+    // Check if it's a cron job (has stop method) or setInterval (numeric ID)
     if (typeof schedulerJob === 'object' && schedulerJob.stop) {
       schedulerJob.stop();
-    } else if (typeof schedulerJob === 'number' || typeof schedulerJob === 'object') {
+    } else if (typeof schedulerJob === 'number') {
       clearInterval(schedulerJob);
     }
     schedulerJob = null;
@@ -537,13 +537,9 @@ async function checkUserSchedule(user, data) {
       }
     }
     
-    // CRITICAL FIX: Only update hashes after successful publication
-    // If both bot and channel publishing failed, we don't update hashes
-    // so the bot will retry on next check
-    const botPublishSuccess = (notifyTarget !== 'channel'); // true if we sent to bot or not trying to send to bot
-    const channelPublishSuccess = !user.channel_id || user.channel_paused || (notifyTarget !== 'bot'); // true if no channel or didn't try
-    
-    // Update hashes - bot will retry if publication completely failed
+    // Update hashes after publication attempt
+    // Note: We always update hashes to prevent infinite retry loops
+    // even if channel publication failed, as the user will be notified
     usersDb.updateUserScheduleHashes(
       user.id,
       todayHash,
