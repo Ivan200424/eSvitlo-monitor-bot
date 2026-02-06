@@ -6,6 +6,14 @@ const usersDb = require('./database/users');
 const { REGIONS } = require('./constants/regions');
 const crypto = require('crypto');
 
+// Get monitoring manager
+let metricsCollector = null;
+try {
+  metricsCollector = require('./monitoring/metricsCollector');
+} catch (e) {
+  // Monitoring not available yet, will work without it
+}
+
 // Day name constants
 const DAY_NAMES = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
 const SHORT_DAY_NAMES = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
@@ -334,6 +342,18 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
     
   } catch (error) {
     console.error('Помилка публікації графіка:', error);
+    
+    // Track channel publish error
+    if (metricsCollector) {
+      metricsCollector.trackChannelEvent('publishErrors');
+      metricsCollector.trackError(error, { 
+        context: 'schedule_publish', 
+        channelId: user.channel_id,
+        region: region,
+        queue: queue
+      });
+    }
+    
     throw error;
   }
 }
