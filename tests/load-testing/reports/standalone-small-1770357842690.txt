@@ -1,0 +1,32 @@
+
+============================================================
+LOAD TEST REPORT: Standalone Test - SMALL
+============================================================
+
+Duration: 0.84s
+
+Response Time:
+  Average: 64.52ms
+  Min: 50ms
+  Max: 111ms
+  P95: 111ms
+  P99: 111ms
+  Total requests: 130
+
+Messages:
+  Sent: 80
+  Received: 0
+
+Errors:
+  Total: 0
+
+Duplicates: 0
+
+Active Schedulers: 0
+
+Memory:
+  Growth: 0.00 MB (0.00%)
+
+============================================================
+TEST RESULT: ✅ PASSED
+============================================================

@@ -1,0 +1,34 @@
+
+============================================================
+LOAD TEST REPORT: Standalone Test - HIGH
+============================================================
+
+Duration: 5.63s
+
+Response Time:
+  Average: 52.11ms
+  Min: 50ms
+  Max: 111ms
+  P95: 51ms
+  P99: 111ms
+  Total requests: 1079
+
+Messages:
+  Sent: 1029
+  Received: 0
+
+Errors:
+  Total: 1
+  Recent:
+    - Telegram API Error: Failed to send message
+
+Duplicates: 0
+
+Active Schedulers: 0
+
+Memory:
+  Growth: 0.00 MB (0.00%)
+
+============================================================
+TEST RESULT: ✅ PASSED
+============================================================

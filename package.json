@@ -6,7 +6,15 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "node test.js"
+    "test": "node test.js",
+    "load-test:small": "node tests/load-testing/run-load-tests.js SMALL",
+    "load-test:medium": "node tests/load-testing/run-load-tests.js MEDIUM",
+    "load-test:high": "node tests/load-testing/run-load-tests.js HIGH",
+    "load-test:stress": "node tests/load-testing/run-load-tests.js STRESS",
+    "load-test:all": "node tests/load-testing/run-load-tests.js ALL",
+    "load-test:soak": "node tests/load-testing/scenarios/soak-test.js 60 300",
+    "load-test:soak-24h": "node tests/load-testing/scenarios/soak-test.js 1440 300",
+    "load-test:soak-72h": "node tests/load-testing/scenarios/soak-test.js 4320 300"
   },
   "keywords": [
     "telegram",

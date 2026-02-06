@@ -1,0 +1,32 @@
+
+============================================================
+LOAD TEST REPORT: Standalone Test - MEDIUM
+============================================================
+
+Duration: 2.10s
+
+Response Time:
+  Average: 55.19ms
+  Min: 49ms
+  Max: 112ms
+  P95: 111ms
+  P99: 112ms
+  Total requests: 380
+
+Messages:
+  Sent: 330
+  Received: 0
+
+Errors:
+  Total: 0
+
+Duplicates: 0
+
+Active Schedulers: 0
+
+Memory:
+  Growth: 0.00 MB (0.00%)
+
+============================================================
+TEST RESULT: ✅ PASSED
+============================================================
