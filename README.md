@@ -56,6 +56,7 @@ Telegram бот для моніторингу відключень електр�
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Архітектура проєкту
 - [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) - Чеклист перед релізом
 - [docs/INCIDENT_PLAYBOOK.md](docs/INCIDENT_PLAYBOOK.md) - Реагування на інциденти
+- [docs/POSTMORTEM_TEMPLATE.md](docs/POSTMORTEM_TEMPLATE.md) - 📄 Шаблон для postmortem
 
 ## 💬 Підтримка
 
