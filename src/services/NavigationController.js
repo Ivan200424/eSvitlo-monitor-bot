@@ -25,6 +25,7 @@
  */
 
 const keyboards = require('../keyboards/inline');
+const { NAVIGATION_GRAPH } = require('../config/navigationGraph');
 
 /**
  * Navigation Controller Class
@@ -32,58 +33,8 @@ const keyboards = require('../keyboards/inline');
  */
 class NavigationController {
   constructor() {
-    // Navigation graph - defines valid transitions
-    this.navigationGraph = {
-      main: {
-        validTargets: ['schedule', 'timer', 'stats', 'settings', 'help'],
-        keyboard: 'getMainMenuInline'
-      },
-      schedule: {
-        validTargets: ['main', 'timer'],
-        keyboard: null,
-        backTo: 'main'
-      },
-      timer: {
-        validTargets: ['main', 'schedule'],
-        keyboard: null,
-        backTo: 'main'
-      },
-      stats: {
-        validTargets: ['main'],
-        keyboard: null,
-        backTo: 'main'
-      },
-      settings: {
-        validTargets: ['main', 'settings_ip', 'settings_channel', 'settings_alerts', 'settings_notifications'],
-        keyboard: 'getSettingsKeyboard',
-        backTo: 'main'
-      },
-      settings_ip: {
-        validTargets: ['settings'],
-        keyboard: null,
-        backTo: 'settings'
-      },
-      settings_channel: {
-        validTargets: ['settings'],
-        keyboard: null,
-        backTo: 'settings'
-      },
-      settings_alerts: {
-        validTargets: ['settings'],
-        keyboard: 'getAlertsSettingsKeyboard',
-        backTo: 'settings'
-      },
-      settings_notifications: {
-        validTargets: ['settings'],
-        keyboard: null,
-        backTo: 'settings'
-      },
-      help: {
-        validTargets: ['main'],
-        keyboard: null,
-        backTo: 'main'
-      }
-    };
+    // Navigation graph loaded from external configuration
+    this.navigationGraph = NAVIGATION_GRAPH;
   }
   
   /**

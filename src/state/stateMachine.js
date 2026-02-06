@@ -16,8 +16,10 @@
 
 const { saveUserState, deleteUserState } = require('../database/db');
 
-// Default timeout for all states (1 hour in milliseconds)
-const DEFAULT_TIMEOUT = 60 * 60 * 1000;
+// Default timeout for all states (10 minutes in milliseconds)
+// Note: This is a conservative default. Most user interactions should complete
+// within a few minutes. For longer flows, specify a custom timeout in state config.
+const DEFAULT_TIMEOUT = 10 * 60 * 1000;
 
 /**
  * State Machine Class

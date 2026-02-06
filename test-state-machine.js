@@ -10,6 +10,12 @@ const { StateMachine, createStateHandler } = require('./src/state/stateMachine')
 
 console.log('🧪 Testing State Machine Framework...\n');
 
+// Test configuration
+const TEST_CONFIG = {
+  SHORT_TIMEOUT: 5000, // 5 seconds for testing
+  TIMEOUT_BUFFER: 500  // Extra time to wait for timeout to fire
+};
+
 // Track events for testing
 const events = [];
 
@@ -35,7 +41,7 @@ const wizardStates = {
     onExit: async (userId, context) => {
       events.push({ type: 'exit', state: 'selectRegion', userId });
     },
-    timeout: 5000 // 5 seconds for testing
+    timeout: TEST_CONFIG.SHORT_TIMEOUT
   }),
   
   selectQueue: createStateHandler({
@@ -169,7 +175,7 @@ async function test6() {
       
       console.log('✓ Timeout handled\n');
       resolve();
-    }, 5500);
+    }, TEST_CONFIG.SHORT_TIMEOUT + TEST_CONFIG.TIMEOUT_BUFFER);
   });
 }
 
