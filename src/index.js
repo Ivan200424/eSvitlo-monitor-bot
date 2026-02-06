@@ -72,6 +72,31 @@ setTimeout(() => {
   checkExistingUsers(bot);
 }, 5000); // Wait 5 seconds after startup
 
+// Start the bot
+bot.start();
+console.log('✨ Бот успішно запущено та готовий до роботу!');
+
+// Обробка сигналів завершення
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+process.on('SIGINT', () => shutdown('SIGINT'));
+
+// Обробка необроблених помилок
+process.on('uncaughtException', async (error) => {
+  console.error('❌ Необроблена помилка:', error);
+  // Track error in monitoring system
+  const metricsCollector = monitoringManager.getMetricsCollector();
+  metricsCollector.trackError(error, { context: 'uncaughtException' });
+  await shutdown('UNCAUGHT_EXCEPTION');
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Необроблене відхилення промісу:', reason);
+  // Track error in monitoring system
+  const metricsCollector = monitoringManager.getMetricsCollector();
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  metricsCollector.trackError(error, { context: 'unhandledRejection' });
+});
+
 // Graceful shutdown з захистом від подвійного виклику
 const shutdown = async (signal) => {
   if (isShuttingDown) {
@@ -83,9 +108,9 @@ const shutdown = async (signal) => {
   console.log(`\n⏳ Отримано ${signal}, завершую роботу...`);
   
   try {
-    // 1. Зупиняємо polling (припиняємо прийом нових повідомлень)
-    await bot.stopPolling();
-    console.log('✅ Polling зупинено');
+    // 1. Зупиняємо бота (припиняємо прийом нових повідомлень)
+    await bot.stop();
+    console.log('✅ Бот зупинено');
     
     // 2. Зупиняємо scheduler manager
     schedulerManager.stop();
@@ -122,26 +147,3 @@ const shutdown = async (signal) => {
     process.exit(1);
   }
 };
-
-// Обробка сигналів завершення
-process.on('SIGTERM', () => shutdown('SIGTERM'));
-process.on('SIGINT', () => shutdown('SIGINT'));
-
-// Обробка необроблених помилок
-process.on('uncaughtException', async (error) => {
-  console.error('❌ Необроблена помилка:', error);
-  // Track error in monitoring system
-  const metricsCollector = monitoringManager.getMetricsCollector();
-  metricsCollector.trackError(error, { context: 'uncaughtException' });
-  await shutdown('UNCAUGHT_EXCEPTION');
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Необроблене відхилення промісу:', reason);
-  // Track error in monitoring system
-  const metricsCollector = monitoringManager.getMetricsCollector();
-  const error = reason instanceof Error ? reason : new Error(String(reason));
-  metricsCollector.trackError(error, { context: 'unhandledRejection' });
-});
-
-console.log('✨ Бот успішно запущено та готовий до роботи!');
