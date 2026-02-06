@@ -169,17 +169,18 @@ try {
     getGrowthRegistrationKeyboard(true)
   ];
   
-  const validPrefixes = ['growth_', 'admin_', 'back_to_main'];
+  const validPrefixes = ['growth_', 'admin_'];
+  const validExactMatches = ['back_to_main'];
   
   keyboards.forEach((keyboard, index) => {
     const buttons = keyboard.reply_markup.inline_keyboard;
     buttons.forEach((row) => {
       row.forEach((btn) => {
         const callbackData = btn.callback_data;
-        const hasValidPrefix = validPrefixes.some(prefix => 
-          callbackData === prefix || callbackData.startsWith(prefix)
-        );
-        assert(hasValidPrefix, `Button "${btn.text}" has invalid callback_data: ${callbackData}`);
+        const hasValidPrefix = validPrefixes.some(prefix => callbackData.startsWith(prefix));
+        const hasValidExactMatch = validExactMatches.includes(callbackData);
+        const isValid = hasValidPrefix || hasValidExactMatch;
+        assert(isValid, `Button "${btn.text}" has invalid callback_data: ${callbackData}`);
       });
     });
   });
