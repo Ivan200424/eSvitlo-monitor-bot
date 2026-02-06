@@ -611,11 +611,12 @@ function getFeedbackByType(feedbackType, limit = 100) {
 function getFeedbackCount(sinceMinutes = null) {
   try {
     if (sinceMinutes) {
+      // Use parameterized query to prevent SQL injection
       return db.prepare(`
         SELECT COUNT(*) as count 
         FROM feedback 
-        WHERE created_at >= datetime('now', '-${sinceMinutes} minutes')
-      `).get().count;
+        WHERE created_at >= datetime('now', '-' || ? || ' minutes')
+      `).get(sinceMinutes).count;
     } else {
       return db.prepare(`
         SELECT COUNT(*) as count FROM feedback
