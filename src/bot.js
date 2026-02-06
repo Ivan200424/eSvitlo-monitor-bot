@@ -3,7 +3,7 @@ const config = require('./config');
 const { savePendingChannel, getPendingChannel, deletePendingChannel, getAllPendingChannels } = require('./database/db');
 
 // Import handlers
-const { handleStart, handleWizardCallback } = require('./handlers/start');
+const { handleStart, handleWizardCallback, handleReset } = require('./handlers/start');
 const { handleSchedule, handleNext, handleTimer } = require('./handlers/schedule');
 const { handleSettings, handleSettingsCallback, handleIpConversation } = require('./handlers/settings');
 const { 
@@ -87,6 +87,7 @@ const help_faq = `❓ Чому не приходять сповіщення?\n�
 
 // Command handlers
 bot.onText(/^\/start$/, (msg) => handleStart(bot, msg));
+bot.onText(/^\/reset$/, (msg) => handleReset(bot, msg));
 bot.onText(/^\/schedule$/, (msg) => handleSchedule(bot, msg));
 bot.onText(/^\/next$/, (msg) => handleNext(bot, msg));
 bot.onText(/^\/timer$/, (msg) => handleTimer(bot, msg));
@@ -115,9 +116,9 @@ bot.on('message', async (msg) => {
   if (text.startsWith('/')) {
     // List of known commands
     const knownCommands = [
-      '/start', '/schedule', '/next', '/timer', '/settings', 
-      '/channel', '/cancel', '/admin', '/stats', '/system',
-      '/broadcast', '/setinterval', '/setdebounce', '/getdebounce'
+      '/start', '/reset', '/schedule', '/next', '/timer', '/settings', 
+      '/channel', '/cancel', '/admin', '/stats', '/system', '/monitoring',
+      '/broadcast', '/setinterval', '/setdebounce', '/getdebounce', '/setalertchannel'
     ];
     
     // Extract command without parameters
@@ -127,7 +128,7 @@ bot.on('message', async (msg) => {
     if (!knownCommands.includes(command)) {
       await bot.sendMessage(
         chatId,
-        '❓ Невідома команда.\n\nДоступні команди:\n/start - Почати роботу з ботом',
+        '❓ Невідома команда.\n\nДоступні команди:\n/start - Почати роботу з ботом\n/reset - Скинути налаштування',
         { parse_mode: 'HTML' }
       );
     }
@@ -149,7 +150,7 @@ bot.on('message', async (msg) => {
     // If text was not handled by any conversation - show fallback message
     await bot.sendMessage(
       chatId,
-      '❓ Не розумію вашу команду.\n\nВикористовуйте кнопки меню або напишіть /start',
+      '❓ Не розумію вашу команду.\n\nВикористовуйте кнопки меню або напишіть /start або /reset',
       { parse_mode: 'HTML' }
     );
     
