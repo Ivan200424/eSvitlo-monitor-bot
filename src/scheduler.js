@@ -7,6 +7,7 @@ const config = require('./config');
 const { REGION_CODES } = require('./constants/regions');
 
 let bot = null;
+let schedulerJob = null; // Track scheduler job for cleanup
 
 // Day name constants
 const DAY_NAMES = ['Неділя', 'Понеділок', 'Вівторок', 'Середа', 'Четвер', 'П\'ятниця', 'Субота'];
@@ -275,6 +276,13 @@ function formatScheduleNotification(scenario, todayEvents, tomorrowEvents, regio
 // Ініціалізація планувальника
 function initScheduler(botInstance) {
   bot = botInstance;
+  
+  // CRITICAL FIX: Prevent duplicate scheduler initialization
+  if (schedulerJob) {
+    console.log('⚠️ Планувальник вже запущено, пропускаємо повторну ініціалізацію');
+    return;
+  }
+  
   console.log('📅 Ініціалізація планувальника...');
   
   // Перевірка графіків - використовуємо секунди з конфігу
@@ -286,19 +294,33 @@ function initScheduler(botInstance) {
     const intervalMinutes = intervalSeconds / 60;
     const cronExpression = `*/${intervalMinutes} * * * *`;
     
-    cron.schedule(cronExpression, async () => {
+    schedulerJob = cron.schedule(cronExpression, async () => {
       console.log(`🔄 Перевірка графіків... (кожні ${formatInterval(intervalSeconds)})`);
       await checkAllSchedules();
     });
   } else {
     // Для інтервалів < 60 секунд або не кратних 60, використовуємо setInterval
-    setInterval(async () => {
+    schedulerJob = setInterval(async () => {
       console.log(`🔄 Перевірка графіків... (кожні ${formatInterval(intervalSeconds)})`);
       await checkAllSchedules();
     }, intervalSeconds * 1000);
   }
   
   console.log(`✅ Планувальник запущено (перевірка кожні ${formatInterval(intervalSeconds)})`);
+}
+
+// Stop scheduler
+function stopScheduler() {
+  if (schedulerJob) {
+    // Check if it's a cron job (has destroy method) or setInterval (numeric ID)
+    if (typeof schedulerJob === 'object' && schedulerJob.stop) {
+      schedulerJob.stop();
+    } else if (typeof schedulerJob === 'number' || typeof schedulerJob === 'object') {
+      clearInterval(schedulerJob);
+    }
+    schedulerJob = null;
+    console.log('✅ Планувальник зупинено');
+  }
 }
 
 // Перевірка всіх графіків
@@ -501,4 +523,5 @@ async function checkUserSchedule(user, data) {
 module.exports = {
   initScheduler,
   checkAllSchedules,
+  stopScheduler,
 };

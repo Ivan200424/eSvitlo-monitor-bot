@@ -430,6 +430,19 @@ function stopPowerMonitoring() {
     periodicSaveInterval = null;
     console.log('💾 Періодичне збереження станів зупинено');
   }
+  
+  // CRITICAL FIX: Clear all pending debounce timers
+  let clearedTimers = 0;
+  userStates.forEach((state) => {
+    if (state.debounceTimer) {
+      clearTimeout(state.debounceTimer);
+      state.debounceTimer = null;
+      clearedTimers++;
+    }
+  });
+  if (clearedTimers > 0) {
+    console.log(`⚡ Очищено ${clearedTimers} debounce таймерів`);
+  }
 }
 
 // Зберегти стан користувача в БД

@@ -18,11 +18,15 @@ const wizardState = new Map();
 // Зберігаємо останній message_id меню для кожного користувача
 const lastMenuMessages = new Map();
 
+// Store interval IDs for cleanup
+let menuCleanupInterval = null;
+let wizardCleanupInterval = null;
+
 // Wizard timeout: 24 години
 const WIZARD_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
 // Автоочистка застарілих записів з lastMenuMessages (кожну годину)
-setInterval(() => {
+menuCleanupInterval = setInterval(() => {
   const oneHourAgo = Date.now() - 60 * 60 * 1000;
   for (const [key, value] of lastMenuMessages.entries()) {
     // Якщо запис має timestamp і він старий - видаляємо
@@ -33,7 +37,7 @@ setInterval(() => {
 }, 60 * 60 * 1000); // Кожну годину
 
 // Автоочистка застарілих wizard станів (кожну годину)
-setInterval(() => {
+wizardCleanupInterval = setInterval(() => {
   const timeoutThreshold = Date.now() - WIZARD_TIMEOUT_MS;
   for (const [telegramId, state] of wizardState.entries()) {
     if (state && state.timestamp && state.timestamp < timeoutThreshold) {
@@ -747,6 +751,19 @@ async function handleWizardCallback(bot, query) {
   }
 }
 
+// Stop cleanup intervals
+function stopWizardCleanupIntervals() {
+  if (menuCleanupInterval) {
+    clearInterval(menuCleanupInterval);
+    menuCleanupInterval = null;
+  }
+  if (wizardCleanupInterval) {
+    clearInterval(wizardCleanupInterval);
+    wizardCleanupInterval = null;
+  }
+  console.log('✅ Wizard cleanup intervals зупинено');
+}
+
 module.exports = {
   handleStart,
   handleWizardCallback,
@@ -756,4 +773,5 @@ module.exports = {
   setWizardState,
   clearWizardState,
   restoreWizardStates,
+  stopWizardCleanupIntervals,
 };
