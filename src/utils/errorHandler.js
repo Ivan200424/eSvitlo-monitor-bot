@@ -76,6 +76,14 @@ async function safeEditMessageText(bot, text, options = {}) {
       // Повідомлення вже актуальне, нічого робити не потрібно
       return null;
     }
+    // Обробляємо помилку "there is no text in the message to edit" — це очікувана ситуація
+    // Виникає коли намагаємось редагувати повідомлення з фото (яке має caption замість тексту)
+    // Логуємо на рівні debug/info замість error, оскільки це нормальна поведінка
+    if (error.code === 'ETELEGRAM' && 
+        error.response?.body?.description?.includes('there is no text in the message to edit')) {
+      // Не логуємо як помилку, бо це очікувана поведінка, яку обробляє викликач
+      throw error;
+    }
     // Інші помилки логуємо з повним контекстом
     logger.error(`Помилка редагування тексту повідомлення:`, { 
       error: error.message,
