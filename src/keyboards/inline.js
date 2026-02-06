@@ -450,17 +450,25 @@ function getPauseMenuKeyboard(isPaused) {
   const statusText = isPaused ? 'Бот на паузі' : 'Бот активний';
   const toggleText = isPaused ? '🟢 Вимкнути паузу' : '🔴 Увімкнути паузу';
   
+  const buttons = [
+    [{ text: `${statusIcon} ${statusText}`, callback_data: 'pause_status' }],
+    [{ text: toggleText, callback_data: 'pause_toggle' }],
+    [{ text: '📋 Налаштувати повідомлення', callback_data: 'pause_message_settings' }],
+  ];
+  
+  if (isPaused) {
+    buttons.push([{ text: '🏷 Тип паузи', callback_data: 'pause_type_select' }]);
+  }
+  
+  buttons.push([{ text: '📜 Лог паузи', callback_data: 'pause_log' }]);
+  buttons.push([
+    { text: '← Назад', callback_data: 'admin_menu' },
+    { text: '⤴ Меню', callback_data: 'back_to_main' }
+  ]);
+  
   return {
     reply_markup: {
-      inline_keyboard: [
-        [{ text: `${statusIcon} ${statusText}`, callback_data: 'pause_status' }],
-        [{ text: toggleText, callback_data: 'pause_toggle' }],
-        [{ text: '📋 Налаштувати повідомлення', callback_data: 'pause_message_settings' }],
-        [
-          { text: '← Назад', callback_data: 'admin_menu' },
-          { text: '⤴ Меню', callback_data: 'back_to_main' }
-        ]
-      ]
+      inline_keyboard: buttons
     }
   };
 }
@@ -484,6 +492,32 @@ function getPauseMessageKeyboard(showSupportButton) {
           { text: '⤴ Меню', callback_data: 'back_to_main' }
         ]
       ]
+    }
+  };
+}
+
+// Меню вибору типу паузи
+function getPauseTypeKeyboard(currentType = 'update') {
+  const types = [
+    { value: 'update', label: '🔧 Оновлення', icon: '🔧' },
+    { value: 'emergency', label: '🚨 Аварія', icon: '🚨' },
+    { value: 'maintenance', label: '🔨 Обслуговування', icon: '🔨' },
+    { value: 'testing', label: '🧪 Тестування', icon: '🧪' },
+  ];
+  
+  const buttons = types.map(type => [{
+    text: currentType === type.value ? `✓ ${type.label}` : type.label,
+    callback_data: `pause_type_${type.value}`
+  }]);
+  
+  buttons.push([
+    { text: '← Назад', callback_data: 'admin_pause' },
+    { text: '⤴ Меню', callback_data: 'back_to_main' }
+  ]);
+  
+  return {
+    reply_markup: {
+      inline_keyboard: buttons
     }
   };
 }
@@ -639,6 +673,7 @@ module.exports = {
   getTestPublicationKeyboard,
   getPauseMenuKeyboard,
   getPauseMessageKeyboard,
+  getPauseTypeKeyboard,
   getErrorKeyboard,
   getDebounceKeyboard,
   getNotifyTargetKeyboard,

@@ -151,6 +151,19 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_pending_channels_id ON pending_channels(channel_id);
     CREATE INDEX IF NOT EXISTS idx_pending_channels_telegram_id ON pending_channels(telegram_id);
     CREATE INDEX IF NOT EXISTS idx_pending_channels_created_at ON pending_channels(created_at);
+    
+    CREATE TABLE IF NOT EXISTS pause_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      pause_type TEXT,
+      message TEXT,
+      reason TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    
+    CREATE INDEX IF NOT EXISTS idx_pause_log_created_at ON pause_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_pause_log_admin_id ON pause_log(admin_id);
   `);
 
   console.log('✅ База даних ініціалізована');
