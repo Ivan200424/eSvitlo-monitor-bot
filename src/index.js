@@ -11,6 +11,7 @@ const { cleanupOldStates } = require('./database/db');
 const { restoreWizardStates } = require('./handlers/start');
 const { restoreConversationStates } = require('./handlers/channel');
 const { restoreIpSetupStates } = require('./handlers/settings');
+const { initStateManager, stopCleanup } = require('./state/stateManager');
 
 // Флаг для запобігання подвійного завершення
 let isShuttingDown = false;
@@ -20,7 +21,10 @@ console.log(`📍 Timezone: ${config.timezone}`);
 console.log(`📊 Перевірка графіків: кожні ${formatInterval(config.checkIntervalSeconds)}`);
 console.log(`💾 База даних: ${config.databasePath}`);
 
-// Відновлення станів з БД
+// Ініціалізація централізованого state manager
+initStateManager();
+
+// Відновлення станів з БД (legacy - буде мігровано до state manager)
 console.log('🔄 Відновлення станів...');
 restorePendingChannels();
 restoreWizardStates();
@@ -59,15 +63,19 @@ const shutdown = async (signal) => {
     await bot.stopPolling();
     console.log('✅ Polling зупинено');
     
-    // 2. Зупиняємо моніторинг живлення
+    // 2. Зупиняємо state manager cleanup
+    stopCleanup();
+    console.log('✅ State manager зупинено');
+    
+    // 3. Зупиняємо моніторинг живлення
     stopPowerMonitoring();
     console.log('✅ Моніторинг живлення зупинено');
     
-    // 3. Зберігаємо всі стани користувачів
+    // 4. Зберігаємо всі стани користувачів
     await saveAllUserStates();
     console.log('✅ Стани користувачів збережено');
     
-    // 4. Закриваємо базу даних коректно
+    // 5. Закриваємо базу даних коректно
     const { closeDatabase } = require('./database/db');
     closeDatabase();
     
