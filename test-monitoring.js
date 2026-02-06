@@ -155,9 +155,9 @@ console.log('\n📊 Система моніторингу готова до ви
 console.log('  • Metrics Collector ✅');
 console.log('  • Alert Manager ✅');
 console.log('  • Monitoring Manager ✅');
-console.log('  • Integration с scheduler ✅');
-console.log('  • Integration с powerMonitor ✅');
-console.log('  • Integration с publisher ✅');
+console.log('  • Integration with scheduler ✅');
+console.log('  • Integration with powerMonitor ✅');
+console.log('  • Integration with publisher ✅');
 console.log('\n🎯 Наступні кроки:');
 console.log('  1. Запустіть бота: npm start');
 console.log('  2. Налаштуйте канал для алертів: /setalertchannel @your_channel');
