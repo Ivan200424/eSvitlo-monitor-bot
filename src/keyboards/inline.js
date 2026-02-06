@@ -439,21 +439,65 @@ function getTestPublicationKeyboard() {
 }
 
 // Меню режиму паузи
-function getPauseMenuKeyboard(isPaused) {
+function getPauseMenuKeyboard(isPaused, pauseType = null) {
   const statusIcon = isPaused ? '🔴' : '🟢';
   const statusText = isPaused ? 'Бот на паузі' : 'Бот активний';
   const toggleText = isPaused ? '🟢 Вимкнути паузу' : '🔴 Увімкнути паузу';
   
+  const typeEmojis = {
+    'update': '🛠',
+    'emergency': '🚨',
+    'testing': '🧪'
+  };
+  
+  const pauseTypeText = isPaused && pauseType ? `Тип: ${typeEmojis[pauseType] || '🔧'} ${pauseType === 'update' ? 'Оновлення' : pauseType === 'emergency' ? 'Аварія' : 'Тестування'}` : '';
+  
+  const buttons = [
+    [{ text: `${statusIcon} ${statusText}`, callback_data: 'pause_status' }]
+  ];
+  
+  if (isPaused && pauseTypeText) {
+    buttons.push([{ text: pauseTypeText, callback_data: 'pause_type_info' }]);
+  }
+  
+  buttons.push(
+    [{ text: toggleText, callback_data: isPaused ? 'pause_confirm_disable' : 'pause_select_type' }],
+    [{ text: '📋 Налаштувати повідомлення', callback_data: 'pause_message_settings' }],
+    [{ text: '📜 Історія пауз', callback_data: 'pause_history' }],
+    [
+      { text: '← Назад', callback_data: 'admin_menu' },
+      { text: '⤴ Меню', callback_data: 'back_to_main' }
+    ]
+  );
+  
+  return {
+    reply_markup: {
+      inline_keyboard: buttons
+    }
+  };
+}
+
+// Меню вибору типу паузи
+function getPauseTypeKeyboard() {
   return {
     reply_markup: {
       inline_keyboard: [
-        [{ text: `${statusIcon} ${statusText}`, callback_data: 'pause_status' }],
-        [{ text: toggleText, callback_data: 'pause_toggle' }],
-        [{ text: '📋 Налаштувати повідомлення', callback_data: 'pause_message_settings' }],
-        [
-          { text: '← Назад', callback_data: 'admin_menu' },
-          { text: '⤴ Меню', callback_data: 'back_to_main' }
-        ]
+        [{ text: '🛠 Оновлення', callback_data: 'pause_type_update' }],
+        [{ text: '🚨 Аварія', callback_data: 'pause_type_emergency' }],
+        [{ text: '🧪 Тестування', callback_data: 'pause_type_testing' }],
+        [{ text: '← Скасувати', callback_data: 'admin_pause' }]
+      ]
+    }
+  };
+}
+
+// Підтвердження вимкнення паузи
+function getPauseDisableConfirmKeyboard() {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: '✓ Так, вимкнути паузу', callback_data: 'pause_disable_confirmed' }],
+        [{ text: '← Скасувати', callback_data: 'admin_pause' }]
       ]
     }
   };
@@ -498,7 +542,7 @@ function getDebounceKeyboard(currentValue) {
   const options = [1, 2, 3, 5, 10, 15];
   const buttons = options.map(min => ({
     text: currentValue === String(min) || currentValue === min ? `✓ ${min} хв` : `${min} хв`,
-    callback_data: `debounce_set_${min}`
+    callback_data: `debounce_confirm_${min}`
   }));
   
   return {
@@ -510,6 +554,46 @@ function getDebounceKeyboard(currentValue) {
           { text: '← Назад', callback_data: 'admin_menu' },
           { text: '⤴ Меню', callback_data: 'back_to_main' }
         ]
+      ]
+    }
+  };
+}
+
+// Підтвердження зміни debounce
+function getDebounceConfirmKeyboard(minutes) {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: `✓ Підтвердити: ${minutes} хв`, callback_data: `debounce_set_${minutes}` }],
+        [{ text: '← Скасувати', callback_data: 'admin_debounce' }]
+      ]
+    }
+  };
+}
+
+// Підтвердження зміни інтервалу графіків
+function getScheduleIntervalConfirmKeyboard(minutes) {
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: `✓ Підтвердити: ${minutes} хв`, callback_data: `admin_schedule_confirm_${minutes}` }],
+        [{ text: '← Скасувати', callback_data: 'admin_interval_schedule' }]
+      ]
+    }
+  };
+}
+
+// Підтвердження зміни інтервалу IP
+function getIpIntervalConfirmKeyboard(seconds) {
+  const formatInterval = (sec) => {
+    if (sec < 60) return `${sec} сек`;
+    return `${Math.round(sec / 60)} хв`;
+  };
+  return {
+    reply_markup: {
+      inline_keyboard: [
+        [{ text: `✓ Підтвердити: ${formatInterval(seconds)}`, callback_data: `admin_ip_confirm_${seconds}` }],
+        [{ text: '← Скасувати', callback_data: 'admin_interval_ip' }]
       ]
     }
   };
@@ -572,9 +656,14 @@ module.exports = {
   getFormatSettingsKeyboard,
   getTestPublicationKeyboard,
   getPauseMenuKeyboard,
+  getPauseTypeKeyboard,
+  getPauseDisableConfirmKeyboard,
   getPauseMessageKeyboard,
   getErrorKeyboard,
   getDebounceKeyboard,
+  getDebounceConfirmKeyboard,
+  getScheduleIntervalConfirmKeyboard,
+  getIpIntervalConfirmKeyboard,
   getNotifyTargetKeyboard,
   getWizardNotifyTargetKeyboard,
 };

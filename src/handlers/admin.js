@@ -1,9 +1,22 @@
 const usersDb = require('../database/users');
-const { getAdminKeyboard, getAdminIntervalsKeyboard, getScheduleIntervalKeyboard, getIpIntervalKeyboard } = require('../keyboards/inline');
+const { 
+  getAdminKeyboard, 
+  getAdminIntervalsKeyboard, 
+  getScheduleIntervalKeyboard, 
+  getIpIntervalKeyboard,
+  getPauseMenuKeyboard,
+  getPauseTypeKeyboard,
+  getPauseDisableConfirmKeyboard,
+  getPauseMessageKeyboard,
+  getDebounceKeyboard,
+  getDebounceConfirmKeyboard,
+  getScheduleIntervalConfirmKeyboard,
+  getIpIntervalConfirmKeyboard
+} = require('../keyboards/inline');
 const { isAdmin, formatUptime, formatMemory, formatInterval } = require('../utils');
 const config = require('../config');
 const { REGIONS } = require('../constants/regions');
-const { getSetting, setSetting } = require('../database/db');
+const { getSetting, setSetting, logPauseAction, logAdminAction, getPauseHistory } = require('../database/db');
 const { safeSendMessage, safeEditMessageText } = require('../utils/errorHandler');
 
 // Обробник команди /admin
@@ -402,12 +415,54 @@ async function handleAdminCallback(bot, query) {
       return;
     }
     
-    // Set schedule interval
-    if (data.startsWith('admin_schedule_')) {
+    // Set schedule interval - show confirmation
+    if (data.startsWith('admin_schedule_') && !data.includes('confirm')) {
       const minutes = parseInt(data.replace('admin_schedule_', ''), 10);
+      const currentInterval = parseInt(getSetting('schedule_check_interval', '60'), 10);
+      const currentMinutes = Math.round(currentInterval / 60);
+      
+      let warningText = '';
+      if (minutes < 5) {
+        warningText = '\n\n⚠️ <b>УВАГА:</b> Інтервал менше 5 хвилин може створити високе навантаження на систему!';
+      }
+      
+      await safeEditMessageText(bot, 
+        `⏱ <b>Підтвердження зміни інтервалу графіків</b>\n\n` +
+        `Поточне: <b>${currentMinutes} хв</b>\n` +
+        `Нове: <b>${minutes} хв</b>\n\n` +
+        `Цей інтервал визначає, як часто бот перевіряє оновлення графіків відключень.${warningText}\n\n` +
+        `⚠️ Потрібен перезапуск бота для застосування змін!\n\n` +
+        `Підтвердити зміну?`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getScheduleIntervalConfirmKeyboard(minutes).reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Confirm schedule interval change
+    if (data.startsWith('admin_schedule_confirm_')) {
+      const minutes = parseInt(data.replace('admin_schedule_confirm_', ''), 10);
       const seconds = minutes * 60;
+      const oldValue = getSetting('schedule_check_interval', '60');
       
       setSetting('schedule_check_interval', String(seconds));
+      
+      // Log admin action
+      logAdminAction(
+        userId,
+        query.from.username || 'unknown',
+        'schedule_interval_change',
+        `Changed schedule check interval from ${Math.round(parseInt(oldValue, 10) / 60)} to ${minutes} minutes`,
+        oldValue,
+        String(seconds),
+        true,
+        null
+      );
       
       await bot.answerCallbackQuery(query.id, {
         text: `✅ Інтервал графіків: ${minutes} хв. Перезапустіть бота.`,
@@ -436,11 +491,57 @@ async function handleAdminCallback(bot, query) {
       return;
     }
     
-    // Set IP interval
-    if (data.startsWith('admin_ip_')) {
+    // Set IP interval - show confirmation
+    if (data.startsWith('admin_ip_') && !data.includes('confirm')) {
       const seconds = parseInt(data.replace('admin_ip_', ''), 10);
+      const currentInterval = parseInt(getSetting('power_check_interval', '2'), 10);
+      
+      const formatInterval = (sec) => {
+        if (sec < 60) return `${sec} сек`;
+        return `${Math.round(sec / 60)} хв`;
+      };
+      
+      let warningText = '';
+      if (seconds < 10) {
+        warningText = '\n\n⚠️ <b>УВАГА:</b> Інтервал менше 10 секунд може створити високе навантаження на мережу!';
+      }
+      
+      await safeEditMessageText(bot, 
+        `📡 <b>Підтвердження зміни інтервалу IP моніторингу</b>\n\n` +
+        `Поточне: <b>${formatInterval(currentInterval)}</b>\n` +
+        `Нове: <b>${formatInterval(seconds)}</b>\n\n` +
+        `Цей інтервал визначає, як часто бот перевіряє доступність роутера для IP моніторингу.${warningText}\n\n` +
+        `⚠️ Потрібен перезапуск бота для застосування змін!\n\n` +
+        `Підтвердити зміну?`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getIpIntervalConfirmKeyboard(seconds).reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Confirm IP interval change
+    if (data.startsWith('admin_ip_confirm_')) {
+      const seconds = parseInt(data.replace('admin_ip_confirm_', ''), 10);
+      const oldValue = getSetting('power_check_interval', '2');
       
       setSetting('power_check_interval', String(seconds));
+      
+      // Log admin action
+      logAdminAction(
+        userId,
+        query.from.username || 'unknown',
+        'ip_interval_change',
+        `Changed IP check interval from ${oldValue}s to ${seconds}s`,
+        oldValue,
+        String(seconds),
+        true,
+        null
+      );
       
       const formatted = formatInterval(seconds);
       await bot.answerCallbackQuery(query.id, {
@@ -473,70 +574,207 @@ async function handleAdminCallback(bot, query) {
     // Pause mode handlers
     if (data === 'admin_pause') {
       const isPaused = getSetting('bot_paused', '0') === '1';
+      const pauseType = getSetting('pause_type', null);
       const pauseMessage = getSetting('pause_message', '🔧 Бот тимчасово недоступний. Спробуйте пізніше.');
-      const showSupport = getSetting('pause_show_support', '1') === '1';
       
       const statusIcon = isPaused ? '🔴' : '🟢';
       const statusText = isPaused ? 'Бот на паузі' : 'Бот активний';
       
-      const { getPauseMenuKeyboard } = require('../keyboards/inline');
+      const typeEmojis = {
+        'update': '🛠 Оновлення',
+        'emergency': '🚨 Аварія',
+        'testing': '🧪 Тестування'
+      };
       
+      let message = '⏸️ <b>Режим паузи</b>\n\n';
+      message += `Статус: <b>${statusIcon} ${statusText}</b>\n`;
+      
+      if (isPaused && pauseType) {
+        message += `Тип: <b>${typeEmojis[pauseType] || pauseType}</b>\n`;
+      }
+      
+      message += '\n<b>При паузі блокується:</b>\n';
+      message += '• ❌ Підключення нових каналів\n';
+      message += '• ❌ Проходження wizard\n';
+      message += '• ❌ Зміна критичних налаштувань\n\n';
+      message += '<b>Дозволено:</b>\n';
+      message += '• ✅ Робота з підключеними даними\n';
+      message += '• ✅ Перегляд меню та графіків\n';
+      message += '• ✅ Адмін-доступ\n';
+      
+      if (isPaused) {
+        message += `\n<b>Повідомлення користувачам:</b>\n"${pauseMessage}"`;
+      }
+      
+      await safeEditMessageText(bot, message, {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: 'HTML',
+        reply_markup: getPauseMenuKeyboard(isPaused, pauseType).reply_markup
+      });
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    if (data === 'pause_status' || data === 'pause_type_info') {
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Select pause type (before enabling)
+    if (data === 'pause_select_type') {
       await safeEditMessageText(bot, 
-        '⏸️ <b>Режим паузи</b>\n\n' +
-        `Статус: <b>${statusIcon} ${statusText}</b>\n\n` +
-        'При паузі:\n' +
-        '• ❌ Блокується підключення нових каналів\n' +
-        '• ✅ Все інше працює\n' +
-        '• 📢 Показується повідомлення користувачам\n\n' +
-        (isPaused ? `Поточне повідомлення:\n"${pauseMessage}"` : ''),
+        '⏸️ <b>Увімкнути режим паузи</b>\n\n' +
+        'Оберіть тип паузи:\n\n' +
+        '🛠 <b>Оновлення</b> - планові технічні роботи\n' +
+        '🚨 <b>Аварія</b> - екстрена ситуація\n' +
+        '🧪 <b>Тестування</b> - режим тестування',
         {
           chat_id: chatId,
           message_id: query.message.message_id,
           parse_mode: 'HTML',
-          reply_markup: getPauseMenuKeyboard(isPaused).reply_markup
+          reply_markup: getPauseTypeKeyboard().reply_markup
         }
       );
       await bot.answerCallbackQuery(query.id);
       return;
     }
     
-    if (data === 'pause_status') {
-      // Just ignore - this is the status indicator
-      await bot.answerCallbackQuery(query.id);
-      return;
-    }
-    
-    if (data === 'pause_toggle') {
-      const isPaused = getSetting('bot_paused', '0') === '1';
-      const newState = isPaused ? '0' : '1';
-      setSetting('bot_paused', newState);
+    // Enable pause with specific type
+    if (data.startsWith('pause_type_')) {
+      const pauseType = data.replace('pause_type_', '');
       
-      const newIsPaused = newState === '1';
-      const statusIcon = newIsPaused ? '🔴' : '🟢';
-      const statusText = newIsPaused ? 'Бот на паузі' : 'Бот активний';
-      const pauseMessage = getSetting('pause_message', '🔧 Бот тимчасово недоступний. Спробуйте пізніше.');
+      // Save pause settings
+      setSetting('bot_paused', '1');
+      setSetting('pause_type', pauseType);
+      setSetting('pause_started_at', String(Math.floor(Date.now() / 1000)));
       
-      const { getPauseMenuKeyboard } = require('../keyboards/inline');
+      // Set default message based on type
+      const defaultMessages = {
+        'update': '🔧 Бот тимчасово оновлюється. Деякі дії недоступні.',
+        'emergency': '🚨 Тимчасова технічна проблема. Ми вже працюємо над вирішенням.',
+        'testing': '🧪 Бот у режимі тестування. Можливі тимчасові збої.'
+      };
       
-      await safeEditMessageText(bot, 
-        '⏸️ <b>Режим паузи</b>\n\n' +
-        `Статус: <b>${statusIcon} ${statusText}</b>\n\n` +
-        'При паузі:\n' +
-        '• ❌ Блокується підключення нових каналів\n' +
-        '• ✅ Все інше працює\n' +
-        '• 📢 Показується повідомлення користувачам\n\n' +
-        (newIsPaused ? `Поточне повідомлення:\n"${pauseMessage}"` : ''),
-        {
-          chat_id: chatId,
-          message_id: query.message.message_id,
-          parse_mode: 'HTML',
-          reply_markup: getPauseMenuKeyboard(newIsPaused).reply_markup
-        }
+      const pauseMessage = defaultMessages[pauseType] || defaultMessages['update'];
+      setSetting('pause_message', pauseMessage);
+      
+      // Log pause action
+      logPauseAction(
+        userId,
+        query.from.username || 'unknown',
+        'enable',
+        pauseType,
+        pauseMessage,
+        null
       );
+      
+      const typeEmojis = {
+        'update': '🛠 Оновлення',
+        'emergency': '🚨 Аварія',
+        'testing': '🧪 Тестування'
+      };
       
       await bot.answerCallbackQuery(query.id, {
-        text: newIsPaused ? '🔴 Паузу увімкнено' : '🟢 Паузу вимкнено',
+        text: `🔴 Паузу увімкнено: ${typeEmojis[pauseType]}`,
         show_alert: true
+      });
+      
+      // Return to pause menu
+      let message = '⏸️ <b>Режим паузи</b>\n\n';
+      message += `Статус: <b>🔴 Бот на паузі</b>\n`;
+      message += `Тип: <b>${typeEmojis[pauseType]}</b>\n\n`;
+      message += '<b>При паузі блокується:</b>\n';
+      message += '• ❌ Підключення нових каналів\n';
+      message += '• ❌ Проходження wizard\n';
+      message += '• ❌ Зміна критичних налаштувань\n\n';
+      message += '<b>Дозволено:</b>\n';
+      message += '• ✅ Робота з підключеними даними\n';
+      message += '• ✅ Перегляд меню та графіків\n';
+      message += '• ✅ Адмін-доступ\n';
+      message += `\n<b>Повідомлення користувачам:</b>\n"${pauseMessage}"`;
+      
+      await safeEditMessageText(bot, message, {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: 'HTML',
+        reply_markup: getPauseMenuKeyboard(true, pauseType).reply_markup
+      });
+      return;
+    }
+    
+    // Confirm disable pause
+    if (data === 'pause_confirm_disable') {
+      const pauseType = getSetting('pause_type', null);
+      const typeEmojis = {
+        'update': '🛠 Оновлення',
+        'emergency': '🚨 Аварія',
+        'testing': '🧪 Тестування'
+      };
+      
+      await safeEditMessageText(bot, 
+        '⏸️ <b>Вимкнути режим паузи?</b>\n\n' +
+        (pauseType ? `Поточний тип: <b>${typeEmojis[pauseType]}</b>\n\n` : '') +
+        'Після вимкнення:\n' +
+        '• Всі функції бота будуть доступні\n' +
+        '• Користувачі зможуть підключати нові канали\n' +
+        '• Wizard буде доступний\n\n' +
+        'Підтвердити вимкнення?',
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getPauseDisableConfirmKeyboard().reply_markup
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
+    // Disable pause (confirmed)
+    if (data === 'pause_disable_confirmed') {
+      const pauseType = getSetting('pause_type', null);
+      const pauseStartedAt = parseInt(getSetting('pause_started_at', '0'), 10);
+      const now = Math.floor(Date.now() / 1000);
+      const duration = pauseStartedAt > 0 ? now - pauseStartedAt : null;
+      
+      // Log pause action
+      logPauseAction(
+        userId,
+        query.from.username || 'unknown',
+        'disable',
+        pauseType,
+        null,
+        duration
+      );
+      
+      // Disable pause
+      setSetting('bot_paused', '0');
+      setSetting('pause_type', null);
+      setSetting('pause_started_at', null);
+      
+      await bot.answerCallbackQuery(query.id, {
+        text: '🟢 Паузу вимкнено',
+        show_alert: true
+      });
+      
+      // Return to pause menu
+      let message = '⏸️ <b>Режим паузи</b>\n\n';
+      message += `Статус: <b>🟢 Бот активний</b>\n\n`;
+      message += '<b>При паузі блокується:</b>\n';
+      message += '• ❌ Підключення нових каналів\n';
+      message += '• ❌ Проходження wizard\n';
+      message += '• ❌ Зміна критичних налаштувань\n\n';
+      message += '<b>Дозволено:</b>\n';
+      message += '• ✅ Робота з підключеними даними\n';
+      message += '• ✅ Перегляд меню та графіків\n';
+      message += '• ✅ Адмін-доступ\n';
+      
+      await safeEditMessageText(bot, message, {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: 'HTML',
+        reply_markup: getPauseMenuKeyboard(false, null).reply_markup
       });
       return;
     }
@@ -626,7 +864,7 @@ async function handleAdminCallback(bot, query) {
     if (data === 'pause_custom_message') {
       // Store conversation state for custom pause message
       const { conversationStates } = require('./channel');
-      conversationStates.set(telegramId, {
+      conversationStates.set(String(userId), {
         state: 'waiting_for_pause_message',
         previousMessageId: query.message.message_id
       });
@@ -645,16 +883,72 @@ async function handleAdminCallback(bot, query) {
       return;
     }
     
+    // Pause history
+    if (data === 'pause_history') {
+      const history = getPauseHistory(10);
+      
+      let message = '📜 <b>Історія пауз</b>\n\n';
+      
+      if (history.length === 0) {
+        message += 'Історія порожня.';
+      } else {
+        const typeEmojis = {
+          'update': '🛠',
+          'emergency': '🚨',
+          'testing': '🧪'
+        };
+        
+        history.forEach((entry, index) => {
+          const date = new Date(entry.created_at);
+          const dateStr = date.toLocaleString('uk-UA', { 
+            day: '2-digit', 
+            month: '2-digit', 
+            year: 'numeric',
+            hour: '2-digit', 
+            minute: '2-digit' 
+          });
+          
+          const actionText = entry.action === 'enable' ? 'Увімкнено' : 'Вимкнено';
+          const typeIcon = entry.pause_type ? typeEmojis[entry.pause_type] || '🔧' : '';
+          
+          message += `${index + 1}. ${dateStr}\n`;
+          message += `   ${actionText} ${typeIcon}\n`;
+          if (entry.admin_username) {
+            message += `   Адмін: @${entry.admin_username}\n`;
+          }
+          if (entry.duration_seconds && entry.action === 'disable') {
+            const hours = Math.floor(entry.duration_seconds / 3600);
+            const minutes = Math.floor((entry.duration_seconds % 3600) / 60);
+            message += `   Тривалість: ${hours}год ${minutes}хв\n`;
+          }
+          message += '\n';
+        });
+      }
+      
+      await safeEditMessageText(bot, message, {
+        chat_id: chatId,
+        message_id: query.message.message_id,
+        parse_mode: 'HTML',
+        reply_markup: {
+          inline_keyboard: [
+            [{ text: '← Назад', callback_data: 'admin_pause' }]
+          ]
+        }
+      });
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
     // Debounce handlers
     if (data === 'admin_debounce') {
       const currentDebounce = getSetting('power_debounce_minutes', '5');
-      const { getDebounceKeyboard } = require('../keyboards/inline');
       
       await safeEditMessageText(bot, 
         `⏸ <b>Налаштування Debounce</b>\n\n` +
         `Поточне значення: <b>${currentDebounce} хв</b>\n\n` +
         `Debounce — мінімальний час стабільного стану світла перед публікацією.\n` +
         `Це запобігає спаму при "моргаючому" світлі.\n\n` +
+        `⚠️ Значення менше 2 хвилин можуть призвести до спаму.\n\n` +
         `Оберіть нове значення:`,
         {
           chat_id: chatId,
@@ -667,22 +961,63 @@ async function handleAdminCallback(bot, query) {
       return;
     }
     
+    // Debounce confirmation
+    if (data.startsWith('debounce_confirm_')) {
+      const minutes = data.replace('debounce_confirm_', '');
+      const currentDebounce = getSetting('power_debounce_minutes', '5');
+      
+      let warningText = '';
+      if (parseInt(minutes, 10) < 2) {
+        warningText = '\n\n⚠️ <b>УВАГА:</b> Значення менше 2 хвилин може призвести до частих сповіщень при нестабільному світлі!';
+      }
+      
+      await safeEditMessageText(bot, 
+        `⏸ <b>Підтвердження зміни Debounce</b>\n\n` +
+        `Поточне: <b>${currentDebounce} хв</b>\n` +
+        `Нове: <b>${minutes} хв</b>\n\n` +
+        `Debounce визначає, скільки часу стан світла має бути стабільним перед відправкою сповіщення.${warningText}\n\n` +
+        `Підтвердити зміну?`,
+        {
+          chat_id: chatId,
+          message_id: query.message.message_id,
+          parse_mode: 'HTML',
+          reply_markup: getDebounceConfirmKeyboard(minutes).reply_markup,
+        }
+      );
+      await bot.answerCallbackQuery(query.id);
+      return;
+    }
+    
     if (data.startsWith('debounce_set_')) {
       const minutes = data.replace('debounce_set_', '');
+      const oldValue = getSetting('power_debounce_minutes', '5');
+      
       setSetting('power_debounce_minutes', minutes);
-      const { getDebounceKeyboard } = require('../keyboards/inline');
+      
+      // Log admin action
+      logAdminAction(
+        userId,
+        query.from.username || 'unknown',
+        'debounce_change',
+        `Changed debounce from ${oldValue} to ${minutes} minutes`,
+        oldValue,
+        minutes,
+        true,
+        null
+      );
       
       await bot.answerCallbackQuery(query.id, {
         text: `✅ Debounce встановлено: ${minutes} хв`,
         show_alert: true
       });
       
-      // Оновити повідомлення з оновленою клавіатурою
+      // Return to debounce menu
       await safeEditMessageText(bot, 
         `⏸ <b>Налаштування Debounce</b>\n\n` +
         `Поточне значення: <b>${minutes} хв</b>\n\n` +
         `Debounce — мінімальний час стабільного стану світла перед публікацією.\n` +
         `Це запобігає спаму при "моргаючому" світлі.\n\n` +
+        `⚠️ Значення менше 2 хвилин можуть призвести до спаму.\n\n` +
         `Оберіть нове значення:`,
         {
           chat_id: chatId,

@@ -148,6 +148,38 @@ function initializeDatabase() {
     CREATE INDEX IF NOT EXISTS idx_pending_channels_id ON pending_channels(channel_id);
     CREATE INDEX IF NOT EXISTS idx_pending_channels_telegram_id ON pending_channels(telegram_id);
     CREATE INDEX IF NOT EXISTS idx_pending_channels_created_at ON pending_channels(created_at);
+
+    CREATE TABLE IF NOT EXISTS pause_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id TEXT NOT NULL,
+      admin_username TEXT,
+      action TEXT NOT NULL,
+      pause_type TEXT,
+      pause_message TEXT,
+      duration_seconds INTEGER,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_pause_log_admin_id ON pause_log(admin_id);
+    CREATE INDEX IF NOT EXISTS idx_pause_log_created_at ON pause_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_pause_log_action ON pause_log(action);
+
+    CREATE TABLE IF NOT EXISTS admin_action_log (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      admin_id TEXT NOT NULL,
+      admin_username TEXT,
+      action_type TEXT NOT NULL,
+      action_details TEXT,
+      old_value TEXT,
+      new_value TEXT,
+      success BOOLEAN DEFAULT 1,
+      error_message TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_admin_action_log_admin_id ON admin_action_log(admin_id);
+    CREATE INDEX IF NOT EXISTS idx_admin_action_log_created_at ON admin_action_log(created_at);
+    CREATE INDEX IF NOT EXISTS idx_admin_action_log_action_type ON admin_action_log(action_type);
   `);
 
   console.log('✅ База даних ініціалізована');
@@ -425,6 +457,84 @@ function cleanupOldStates() {
   }
 }
 
+// ===============================
+// Pause Log Management Functions
+// ===============================
+
+/**
+ * Логування дії паузи
+ */
+function logPauseAction(adminId, adminUsername, action, pauseType = null, pauseMessage = null, durationSeconds = null) {
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO pause_log (admin_id, admin_username, action, pause_type, pause_message, duration_seconds, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+    stmt.run(adminId, adminUsername, action, pauseType, pauseMessage, durationSeconds);
+    return true;
+  } catch (error) {
+    console.error('Error logging pause action:', error);
+    return false;
+  }
+}
+
+/**
+ * Отримати історію пауз
+ */
+function getPauseHistory(limit = 50) {
+  try {
+    const stmt = db.prepare(`
+      SELECT * FROM pause_log 
+      ORDER BY created_at DESC 
+      LIMIT ?
+    `);
+    return stmt.all(limit);
+  } catch (error) {
+    console.error('Error getting pause history:', error);
+    return [];
+  }
+}
+
+// ===============================
+// Admin Action Log Management Functions
+// ===============================
+
+/**
+ * Логування адміністративної дії
+ */
+function logAdminAction(adminId, adminUsername, actionType, actionDetails = null, oldValue = null, newValue = null, success = true, errorMessage = null) {
+  try {
+    const stmt = db.prepare(`
+      INSERT INTO admin_action_log (admin_id, admin_username, action_type, action_details, old_value, new_value, success, error_message, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+    `);
+    stmt.run(adminId, adminUsername, actionType, actionDetails, oldValue, newValue, success ? 1 : 0, errorMessage);
+    return true;
+  } catch (error) {
+    console.error('Error logging admin action:', error);
+    return false;
+  }
+}
+
+/**
+ * Отримати історію адмін-дій
+ */
+function getAdminActionHistory(limit = 100, actionType = null) {
+  try {
+    let query = `SELECT * FROM admin_action_log`;
+    if (actionType) {
+      query += ` WHERE action_type = ?`;
+    }
+    query += ` ORDER BY created_at DESC LIMIT ?`;
+    
+    const stmt = db.prepare(query);
+    return actionType ? stmt.all(actionType, limit) : stmt.all(limit);
+  } catch (error) {
+    console.error('Error getting admin action history:', error);
+    return [];
+  }
+}
+
 module.exports = db;
 module.exports.getSetting = getSetting;
 module.exports.setSetting = setSetting;
@@ -438,3 +548,7 @@ module.exports.getPendingChannel = getPendingChannel;
 module.exports.deletePendingChannel = deletePendingChannel;
 module.exports.getAllPendingChannels = getAllPendingChannels;
 module.exports.cleanupOldStates = cleanupOldStates;
+module.exports.logPauseAction = logPauseAction;
+module.exports.getPauseHistory = getPauseHistory;
+module.exports.logAdminAction = logAdminAction;
+module.exports.getAdminActionHistory = getAdminActionHistory;
