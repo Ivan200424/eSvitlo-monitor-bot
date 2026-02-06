@@ -12,6 +12,8 @@ const fs = require('fs');
 const { runMassStartTest } = require('./scenarios/mass-start');
 const { runMassGraphUpdatesTest } = require('./scenarios/mass-graph-updates');
 const { runIPMonitoringTest } = require('./scenarios/ip-monitoring');
+const { runWizardUnderLoadTest } = require('./scenarios/wizard-under-load');
+const { runRecoveryTest } = require('./scenarios/recovery-test');
 
 // Load levels
 const LOAD_LEVELS = {
@@ -37,7 +39,7 @@ async function runLoadTestsForLevel(level) {
   };
 
   // Test 1: Mass /start
-  console.log('\n📋 Test 1/3: Mass /start');
+  console.log('\n📋 Test 1/5: Mass /start');
   try {
     const passed = await runMassStartTest(level.users, 10);
     results.tests.push({
@@ -54,8 +56,26 @@ async function runLoadTestsForLevel(level) {
     });
   }
 
-  // Test 2: Mass Graph Updates
-  console.log('\n📋 Test 2/3: Mass Graph Updates');
+  // Test 2: Wizard Under Load
+  console.log('\n📋 Test 2/5: Wizard Under Load');
+  try {
+    const passed = await runWizardUnderLoadTest(level.users, 10);
+    results.tests.push({
+      name: 'wizard-under-load',
+      passed,
+      users: level.users
+    });
+  } catch (error) {
+    console.error('Test failed:', error);
+    results.tests.push({
+      name: 'wizard-under-load',
+      passed: false,
+      error: error.message
+    });
+  }
+
+  // Test 3: Mass Graph Updates
+  console.log('\n📋 Test 3/5: Mass Graph Updates');
   try {
     const passed = await runMassGraphUpdatesTest(level.users, 5);
     results.tests.push({
@@ -72,8 +92,8 @@ async function runLoadTestsForLevel(level) {
     });
   }
 
-  // Test 3: IP Monitoring
-  console.log('\n📋 Test 3/3: IP Monitoring');
+  // Test 4: IP Monitoring
+  console.log('\n📋 Test 4/5: IP Monitoring');
   try {
     const passed = await runIPMonitoringTest(level.ips, Math.floor(level.ips * 0.2), Math.floor(level.ips * 0.8));
     results.tests.push({
@@ -85,6 +105,24 @@ async function runLoadTestsForLevel(level) {
     console.error('Test failed:', error);
     results.tests.push({
       name: 'ip-monitoring',
+      passed: false,
+      error: error.message
+    });
+  }
+
+  // Test 5: Recovery Test
+  console.log('\n📋 Test 5/5: Recovery Test');
+  try {
+    const passed = await runRecoveryTest(level.users);
+    results.tests.push({
+      name: 'recovery-test',
+      passed,
+      users: level.users
+    });
+  } catch (error) {
+    console.error('Test failed:', error);
+    results.tests.push({
+      name: 'recovery-test',
       passed: false,
       error: error.message
     });
