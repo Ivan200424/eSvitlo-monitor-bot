@@ -66,7 +66,7 @@ async function handleFeedback(bot, msg, context = null) {
     const sentMessage = await safeSendMessage(
       bot,
       chatId,
-      '💬 <b>Зворотний зв'язок</b>\n\n' +
+      '💬 <b>Зворотний звʼязок</b>\n\n' +
       'Оберіть тип відгуку:',
       {
         parse_mode: 'HTML',
