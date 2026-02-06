@@ -19,6 +19,7 @@ class CapacityMonitor {
     this.monitoringInterval = null;
     this.checkIntervalMs = 60 * 1000; // Check every minute
     this.isInitialized = false;
+    this.lastSummaryLog = 0; // Track last summary log time
     
     // Emergency actions reference
     this.emergencyActions = {
@@ -107,9 +108,12 @@ class CapacityMonitor {
       // Check if we need to enter or exit emergency mode
       this.checkEmergencyMode(statuses);
 
-      // Log capacity summary periodically (every 5 minutes)
-      if (Date.now() % (5 * 60 * 1000) < this.checkIntervalMs) {
+      // Log capacity summary every 5 minutes
+      const now = Date.now();
+      const fiveMinutes = 5 * 60 * 1000;
+      if (now - this.lastSummaryLog >= fiveMinutes) {
         this.logCapacitySummary(statuses);
+        this.lastSummaryLog = now;
       }
 
     } catch (error) {

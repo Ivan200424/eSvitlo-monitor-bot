@@ -311,12 +311,14 @@ async function publishScheduleWithPhoto(bot, user, region, queue) {
       // Завантажуємо зображення як Buffer
       const imageBuffer = await fetchScheduleImage(region, queue);
       
-      // Track capacity before publishing
+      // Track and check capacity before publishing
       if (capacityTracker) {
         const canPublish = capacityTracker.canPublishToChannel(user.channel_id);
         if (!canPublish.allowed) {
           console.log(`Capacity limit reached for channel ${user.channel_id}: ${canPublish.reason}`);
-          // Could queue the message for later instead of blocking
+          // TODO: Queue the message for later instead of blocking
+          // For now, we log but continue to prevent silent failures
+          // In production, this should queue the message
         }
         capacityTracker.trackChannelPublish(user.channel_id);
       }

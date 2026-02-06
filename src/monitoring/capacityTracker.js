@@ -128,12 +128,22 @@ class CapacityTracker {
   }
 
   /**
+   * Helper to track per-channel message count
+   * @param {string} channelId - Channel ID
+   */
+  _trackChannelMessageCount(channelId) {
+    if (!channelId) return;
+    const current = this.usage.messages.perChannelPerMinute.get(channelId) || 0;
+    this.usage.messages.perChannelPerMinute.set(channelId, current + 1);
+  }
+
+  /**
    * Track channel publish
+   * @param {string} channelId - Channel ID
    */
   trackChannelPublish(channelId) {
     this.usage.channels.publishPerMinute++;
-    const current = this.usage.messages.perChannelPerMinute.get(channelId) || 0;
-    this.usage.messages.perChannelPerMinute.set(channelId, current + 1);
+    this._trackChannelMessageCount(channelId);
   }
 
   /**
@@ -186,10 +196,7 @@ class CapacityTracker {
    */
   trackMessage(channelId = null) {
     this.usage.messages.perMinute++;
-    if (channelId) {
-      const current = this.usage.messages.perChannelPerMinute.get(channelId) || 0;
-      this.usage.messages.perChannelPerMinute.set(channelId, current + 1);
-    }
+    this._trackChannelMessageCount(channelId);
   }
 
   /**
