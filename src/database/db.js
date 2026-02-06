@@ -51,6 +51,9 @@ function initializeDatabase() {
       last_alert_on_period TEXT,
       alert_off_message_id INTEGER,
       alert_on_message_id INTEGER,
+      today_snapshot_hash TEXT,
+      tomorrow_snapshot_hash TEXT,
+      tomorrow_published_date TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
