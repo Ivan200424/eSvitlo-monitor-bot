@@ -5,66 +5,39 @@ const { REGIONS } = require('../constants/regions');
 const { getBotUsername, getChannelConnectionInstructions, escapeHtml } = require('../utils');
 const { safeSendMessage, safeDeleteMessage, safeEditMessage, safeEditMessageText } = require('../utils/errorHandler');
 const { getSetting } = require('../database/db');
-const { saveUserState, getUserState, deleteUserState, getAllUserStates } = require('../database/db');
 const { isRegistrationEnabled, checkUserLimit, logUserRegistration, logWizardCompletion } = require('../growthMetrics');
+const { getState, setState, clearState, hasState } = require('../state/stateManager');
 
 // Constants imported from channel.js for consistency
 const PENDING_CHANNEL_EXPIRATION_MS = 30 * 60 * 1000; // 30 minutes
 const CHANNEL_NAME_PREFIX = 'Вольтик ⚡️ ';
 
-// Стан wizard для кожного користувача
-const wizardState = new Map();
-
-// Зберігаємо останній message_id меню для кожного користувача
-const lastMenuMessages = new Map();
-
-// Автоочистка застарілих записів з lastMenuMessages (кожну годину)
-setInterval(() => {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  for (const [key, value] of lastMenuMessages.entries()) {
-    // Якщо запис має timestamp і він старий - видаляємо
-    if (value && value.timestamp && value.timestamp < oneHourAgo) {
-      lastMenuMessages.delete(key);
-    }
-  }
-}, 60 * 60 * 1000); // Кожну годину
-
 // Helper function to check if user is in wizard
 function isInWizard(telegramId) {
-  const state = wizardState.get(telegramId);
+  const state = getState('wizard', telegramId);
   return !!(state && state.step);
 }
 
-// Helper functions to manage wizard state with DB persistence
+// Helper functions to manage wizard state (now using centralized state manager)
 function setWizardState(telegramId, data) {
-  wizardState.set(telegramId, data);
-  saveUserState(telegramId, 'wizard', data);
+  setState('wizard', telegramId, data);
 }
 
 function getWizardState(telegramId) {
-  return wizardState.get(telegramId);
+  return getState('wizard', telegramId);
 }
 
 function clearWizardState(telegramId) {
-  wizardState.delete(telegramId);
-  deleteUserState(telegramId, 'wizard');
+  clearState('wizard', telegramId);
 }
 
 /**
  * Відновити wizard стани з БД при запуску бота
+ * NOTE: This is now handled by centralized state manager, kept for backward compatibility
  */
 function restoreWizardStates() {
-  const states = getAllUserStates('wizard');
-  for (const { telegram_id, state_data } of states) {
-    try {
-      const data = JSON.parse(state_data);
-      // Don't call setWizardState here to avoid double-writing to DB
-      wizardState.set(telegram_id, data);
-    } catch (error) {
-      console.error(`Помилка відновлення wizard стану для ${telegram_id}:`, error);
-    }
-  }
-  console.log(`✅ Відновлено ${states.length} wizard станів`);
+  // State restoration is now handled by initStateManager()
+  console.log('✅ Wizard states restored by centralized state manager');
 }
 
 // Helper function to create pause mode keyboard
@@ -85,7 +58,7 @@ async function startWizard(bot, chatId, telegramId, username, mode = 'new') {
   setWizardState(telegramId, { step: 'region', mode });
   
   // Видаляємо попереднє wizard-повідомлення якщо є
-  const lastMsg = lastMenuMessages.get(telegramId);
+  const lastMsg = getState('lastMenuMessages', telegramId);
   if (lastMsg && lastMsg.messageId) {
     try {
       await bot.deleteMessage(chatId, lastMsg.messageId);
@@ -116,13 +89,12 @@ async function startWizard(bot, chatId, telegramId, username, mode = 'new') {
   
   // Зберігаємо ID нового повідомлення або видаляємо запис при невдачі
   if (sentMessage) {
-    lastMenuMessages.set(telegramId, {
-      messageId: sentMessage.message_id,
-      timestamp: Date.now()
-    });
+    setState('lastMenuMessages', telegramId, {
+      messageId: sentMessage.message_id
+    }, false); // Don't persist menu message IDs to DB
   } else {
     // Видаляємо запис якщо не вдалося відправити, щоб уникнути застарілих ID
-    lastMenuMessages.delete(telegramId);
+    clearState('lastMenuMessages', telegramId);
   }
 }
 

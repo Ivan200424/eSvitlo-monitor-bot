@@ -6,50 +6,29 @@ const { isAdmin, generateLiveStatusMessage } = require('../utils');
 const config = require('../config');
 const { formatErrorMessage } = require('../formatter');
 const { safeSendMessage, safeDeleteMessage, safeEditMessageText } = require('../utils/errorHandler');
-const { saveUserState, getUserState, deleteUserState, getAllUserStates } = require('../database/db');
 const { logIpMonitoringSetup } = require('../growthMetrics');
+const { getState, setState, clearState } = require('../state/stateManager');
 
-// Store IP setup conversation states
-const ipSetupStates = new Map();
-
-// Автоочистка застарілих записів з ipSetupStates (кожну годину)
-setInterval(() => {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  for (const [key, value] of ipSetupStates.entries()) {
-    if (value && value.timestamp && value.timestamp < oneHourAgo) {
-      // Очищаємо таймери перед видаленням
-      if (value.warningTimeout) clearTimeout(value.warningTimeout);
-      if (value.finalTimeout) clearTimeout(value.finalTimeout);
-      if (value.timeout) clearTimeout(value.timeout);
-      ipSetupStates.delete(key);
-    }
-  }
-}, 60 * 60 * 1000); // Кожну годину
-
-// Helper functions to manage IP setup states with DB persistence
+// Helper functions to manage IP setup states (now using centralized state manager)
 function setIpSetupState(telegramId, data) {
-  const stateWithTimestamp = { ...data, timestamp: Date.now() };
-  ipSetupStates.set(telegramId, stateWithTimestamp);
-  // Don't persist timeout handlers to DB - they contain function references
-  // that cannot be serialized and would be expired on restart anyway
+  // Don't persist timeout handlers - they contain function references
   const { warningTimeout, finalTimeout, timeout, ...persistData } = data;
-  saveUserState(telegramId, 'ip_setup', { ...persistData, timestamp: Date.now() });
+  setState('ipSetup', telegramId, persistData);
 }
 
 function getIpSetupState(telegramId) {
-  return ipSetupStates.get(telegramId);
+  return getState('ipSetup', telegramId);
 }
 
 function clearIpSetupState(telegramId) {
-  const state = ipSetupStates.get(telegramId);
+  const state = getState('ipSetup', telegramId);
   if (state) {
     // Очищаємо таймери перед видаленням
     if (state.warningTimeout) clearTimeout(state.warningTimeout);
     if (state.finalTimeout) clearTimeout(state.finalTimeout);
     if (state.timeout) clearTimeout(state.timeout);
   }
-  ipSetupStates.delete(telegramId);
-  deleteUserState(telegramId, 'ip_setup');
+  clearState('ipSetup', telegramId);
 }
 
 // Helper function to send main menu
@@ -77,20 +56,11 @@ async function sendMainMenu(bot, chatId, telegramId) {
 
 /**
  * Відновити IP setup стани з БД при запуску бота
+ * NOTE: This is now handled by centralized state manager, kept for backward compatibility
  */
 function restoreIpSetupStates() {
-  const states = getAllUserStates('ip_setup');
-  for (const { telegram_id, state_data } of states) {
-    try {
-      const data = JSON.parse(state_data);
-      // Don't call setIpSetupState here to avoid double-writing to DB
-      // Note: We don't restore timeouts as they would be expired anyway
-      ipSetupStates.set(telegram_id, { ...data, timestamp: Date.now() });
-    } catch (error) {
-      console.error(`Помилка відновлення IP setup стану для ${telegram_id}:`, error);
-    }
-  }
-  console.log(`✅ Відновлено ${states.length} IP setup станів`);
+  // State restoration is now handled by initStateManager()
+  console.log('✅ IP setup states restored by centralized state manager');
 }
 
 // IP address and domain validation function
