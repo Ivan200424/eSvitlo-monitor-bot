@@ -5,6 +5,14 @@ const { formatExactDuration, formatTime, formatInterval } = require('./utils');
 const { formatTemplate } = require('./formatter');
 const db = require('./database/db');
 
+// Get monitoring manager
+let metricsCollector = null;
+try {
+  metricsCollector = require('./monitoring/metricsCollector');
+} catch (e) {
+  // Monitoring not available yet, will work without it
+}
+
 let bot = null;
 let monitoringInterval = null;
 let periodicSaveInterval = null; // Інтервал для періодичного збереження станів
@@ -104,6 +112,13 @@ async function getNextScheduledTime(user) {
 async function handlePowerStateChange(user, newState, oldState, userState, originalChangeTime = null) {
   try {
     const now = new Date();
+    
+    // Track IP monitoring event
+    if (metricsCollector) {
+      if (oldState === 'off' && newState === 'on') {
+        metricsCollector.trackIPEvent('offlineToOnline');
+      }
+    }
     
     // Використовуємо переданий час або поточний
     const changeTime = originalChangeTime 
@@ -220,6 +235,13 @@ async function handlePowerStateChange(user, newState, oldState, userState, origi
         console.log(`📱 Повідомлення про зміну стану відправлено користувачу ${user.telegram_id}`);
       } catch (error) {
         console.error(`Помилка відправки повідомлення користувачу ${user.telegram_id}:`, error.message);
+        // Track error
+        if (metricsCollector) {
+          metricsCollector.trackError(error, { 
+            context: 'power_notification', 
+            userId: user.telegram_id 
+          });
+        }
       }
     }
     
@@ -234,6 +256,14 @@ async function handlePowerStateChange(user, newState, oldState, userState, origi
           console.log(`📢 Повідомлення про зміну стану відправлено в канал ${user.channel_id}`);
         } catch (error) {
           console.error(`Помилка відправки повідомлення в канал ${user.channel_id}:`, error.message);
+          // Track channel error
+          if (metricsCollector) {
+            metricsCollector.trackChannelEvent('publishErrors');
+            metricsCollector.trackError(error, { 
+              context: 'channel_power_notification', 
+              channelId: user.channel_id 
+            });
+          }
         }
       }
     }

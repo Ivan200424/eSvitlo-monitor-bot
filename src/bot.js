@@ -14,7 +14,9 @@ const {
   handleBroadcast,
   handleSetInterval,
   handleSetDebounce,
-  handleGetDebounce
+  handleGetDebounce,
+  handleMonitoring,
+  handleSetAlertChannel
 } = require('./handlers/admin');
 const { 
   handleChannel, 
@@ -94,6 +96,8 @@ bot.onText(/^\/cancel$/, (msg) => handleCancelChannel(bot, msg));
 bot.onText(/^\/admin$/, (msg) => handleAdmin(bot, msg));
 bot.onText(/^\/stats$/, (msg) => handleStats(bot, msg));
 bot.onText(/^\/system$/, (msg) => handleSystem(bot, msg));
+bot.onText(/^\/monitoring$/, (msg) => handleMonitoring(bot, msg));
+bot.onText(/^\/setalertchannel (.+)/, (msg, match) => handleSetAlertChannel(bot, msg, match));
 bot.onText(/^\/broadcast (.+)/, (msg, match) => handleBroadcast(bot, msg, match));
 bot.onText(/^\/setinterval (\d+)/, (msg, match) => handleSetInterval(bot, msg, match));
 bot.onText(/^\/setdebounce (\d+)/, (msg, match) => handleSetDebounce(bot, msg, match));

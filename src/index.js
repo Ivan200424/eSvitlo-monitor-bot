@@ -12,6 +12,7 @@ const { restoreWizardStates } = require('./handlers/start');
 const { restoreConversationStates } = require('./handlers/channel');
 const { restoreIpSetupStates } = require('./handlers/settings');
 const { initStateManager, stopCleanup } = require('./state/stateManager');
+const { monitoringManager } = require('./monitoring/monitoringManager');
 
 // Флаг для запобігання подвійного завершення
 let isShuttingDown = false;
@@ -44,6 +45,19 @@ initChannelGuard(bot);
 // Ініціалізація моніторингу живлення
 startPowerMonitoring(bot);
 
+// Ініціалізація системи моніторингу та алертів
+console.log('🔎 Ініціалізація системи моніторингу...');
+monitoringManager.init(bot, {
+  checkIntervalMinutes: 5,
+  errorSpikeThreshold: 10,
+  errorSpikeWindow: 5,
+  repeatedErrorThreshold: 5,
+  memoryThresholdMB: 500,
+  maxUptimeDays: 7
+});
+monitoringManager.start();
+console.log('✅ Система моніторингу запущена');
+
 // Check existing users for migration (run once on startup)
 setTimeout(() => {
   checkExistingUsers(bot);
@@ -72,15 +86,19 @@ const shutdown = async (signal) => {
     stopCleanup();
     console.log('✅ State manager зупинено');
     
-    // 4. Зупиняємо моніторинг живлення
+    // 4. Зупиняємо систему моніторингу
+    monitoringManager.stop();
+    console.log('✅ Система моніторингу зупинена');
+    
+    // 5. Зупиняємо моніторинг живлення
     stopPowerMonitoring();
     console.log('✅ Моніторинг живлення зупинено');
     
-    // 5. Зберігаємо всі стани користувачів
+    // 6. Зберігаємо всі стани користувачів
     await saveAllUserStates();
     console.log('✅ Стани користувачів збережено');
     
-    // 6. Закриваємо базу даних коректно
+    // 7. Закриваємо базу даних коректно
     const { closeDatabase } = require('./database/db');
     closeDatabase();
     
@@ -99,11 +117,18 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 // Обробка необроблених помилок
 process.on('uncaughtException', async (error) => {
   console.error('❌ Необроблена помилка:', error);
+  // Track error in monitoring system
+  const metricsCollector = monitoringManager.getMetricsCollector();
+  metricsCollector.trackError(error, { context: 'uncaughtException' });
   await shutdown('UNCAUGHT_EXCEPTION');
 });
 
 process.on('unhandledRejection', (reason, promise) => {
   console.error('❌ Необроблене відхилення промісу:', reason);
+  // Track error in monitoring system
+  const metricsCollector = monitoringManager.getMetricsCollector();
+  const error = reason instanceof Error ? reason : new Error(String(reason));
+  metricsCollector.trackError(error, { context: 'unhandledRejection' });
 });
 
 console.log('✨ Бот успішно запущено та готовий до роботи!');

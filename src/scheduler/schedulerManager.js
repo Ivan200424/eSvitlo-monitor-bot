@@ -18,6 +18,14 @@
 const cron = require('node-cron');
 const { formatInterval } = require('../utils');
 
+// Get monitoring manager
+let metricsCollector = null;
+try {
+  metricsCollector = require('../monitoring/metricsCollector');
+} catch (e) {
+  // Monitoring not available yet, will work without it
+}
+
 class SchedulerManager {
   constructor() {
     // Track all active schedulers
@@ -77,6 +85,14 @@ class SchedulerManager {
     
     console.log('🚀 Starting schedulers...');
     
+    // Track scheduler start
+    if (metricsCollector) {
+      metricsCollector.trackStateTransition('scheduler_start', {
+        interval: this.config.scheduleCheckInterval,
+        timestamp: new Date().toISOString()
+      });
+    }
+    
     // Start schedule checker
     this._startScheduleChecker(dependencies.checkAllSchedules);
     
@@ -95,6 +111,13 @@ class SchedulerManager {
     }
     
     console.log('🛑 Stopping schedulers...');
+    
+    // Track scheduler stop
+    if (metricsCollector) {
+      metricsCollector.trackStateTransition('scheduler_stop', {
+        timestamp: new Date().toISOString()
+      });
+    }
     
     // Stop schedule checker
     this._stopScheduleChecker();
@@ -134,6 +157,10 @@ class SchedulerManager {
           await checkFunction();
         } catch (error) {
           console.error('❌ Error in schedule checker:', error);
+          // Track error
+          if (metricsCollector) {
+            metricsCollector.trackError(error, { context: 'schedule_checker' });
+          }
         }
       });
     } else {
@@ -144,6 +171,10 @@ class SchedulerManager {
           await checkFunction();
         } catch (error) {
           console.error('❌ Error in schedule checker:', error);
+          // Track error
+          if (metricsCollector) {
+            metricsCollector.trackError(error, { context: 'schedule_checker' });
+          }
         }
       }, intervalSeconds * 1000);
     }
