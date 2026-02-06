@@ -4,53 +4,29 @@ const path = require('path');
 const { getBotUsername, getChannelConnectionInstructions } = require('../utils');
 const { safeSendMessage, safeEditMessageText, safeSetChatTitle, safeSetChatDescription, safeSetChatPhoto } = require('../utils/errorHandler');
 const { checkPauseForChannelActions } = require('../utils/guards');
-const { saveUserState, getUserState, deleteUserState, getAllUserStates } = require('../database/db');
 const { logChannelConnection } = require('../growthMetrics');
+const { getState, setState, clearState } = require('../state/stateManager');
 
-// Store conversation states
-const conversationStates = new Map();
-
-// Автоочистка застарілих записів з conversationStates (кожну годину)
-setInterval(() => {
-  const oneHourAgo = Date.now() - 60 * 60 * 1000;
-  for (const [key, value] of conversationStates.entries()) {
-    if (value && value.timestamp && value.timestamp < oneHourAgo) {
-      clearConversationState(key);
-    }
-  }
-}, 60 * 60 * 1000); // Кожну годину
-
-// Helper functions to manage conversation states with DB persistence
+// Helper functions to manage conversation states (now using centralized state manager)
 function setConversationState(telegramId, data) {
-  const stateWithTimestamp = { ...data, timestamp: Date.now() };
-  conversationStates.set(telegramId, stateWithTimestamp);
-  saveUserState(telegramId, 'conversation', data);
+  setState('conversation', telegramId, data);
 }
 
 function getConversationState(telegramId) {
-  return conversationStates.get(telegramId);
+  return getState('conversation', telegramId);
 }
 
 function clearConversationState(telegramId) {
-  conversationStates.delete(telegramId);
-  deleteUserState(telegramId, 'conversation');
+  clearState('conversation', telegramId);
 }
 
 /**
  * Відновити conversation стани з БД при запуску бота
+ * NOTE: This is now handled by centralized state manager, kept for backward compatibility
  */
 function restoreConversationStates() {
-  const states = getAllUserStates('conversation');
-  for (const { telegram_id, state_data } of states) {
-    try {
-      const data = JSON.parse(state_data);
-      // Don't call setConversationState here to avoid double-writing to DB
-      conversationStates.set(telegram_id, { ...data, timestamp: Date.now() });
-    } catch (error) {
-      console.error(`Помилка відновлення conversation стану для ${telegram_id}:`, error);
-    }
-  }
-  console.log(`✅ Відновлено ${states.length} conversation станів`);
+  // State restoration is now handled by initStateManager()
+  console.log('✅ Conversation states restored by centralized state manager');
 }
 
 // Helper function to check if error is a Telegram "not modified" error

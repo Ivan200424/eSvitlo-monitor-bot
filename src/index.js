@@ -2,7 +2,7 @@
 
 const bot = require('./bot');
 const { restorePendingChannels } = require('./bot');
-const { initScheduler } = require('./scheduler');
+const { initScheduler, schedulerManager } = require('./scheduler');
 const { startPowerMonitoring, stopPowerMonitoring, saveAllUserStates } = require('./powerMonitor');
 const { initChannelGuard, checkExistingUsers } = require('./channelGuard');
 const { formatInterval } = require('./utils');
@@ -11,6 +11,7 @@ const { cleanupOldStates } = require('./database/db');
 const { restoreWizardStates } = require('./handlers/start');
 const { restoreConversationStates } = require('./handlers/channel');
 const { restoreIpSetupStates } = require('./handlers/settings');
+const { initStateManager, stopCleanup } = require('./state/stateManager');
 
 // Флаг для запобігання подвійного завершення
 let isShuttingDown = false;
@@ -20,12 +21,16 @@ console.log(`📍 Timezone: ${config.timezone}`);
 console.log(`📊 Перевірка графіків: кожні ${formatInterval(config.checkIntervalSeconds)}`);
 console.log(`💾 База даних: ${config.databasePath}`);
 
-// Відновлення станів з БД
+// Ініціалізація централізованого state manager
+initStateManager();
+
+// Legacy state restoration calls - can be removed once state manager migration is complete
+// These are now handled by initStateManager() but kept for backward compatibility
 console.log('🔄 Відновлення станів...');
-restorePendingChannels();
-restoreWizardStates();
-restoreConversationStates();
-restoreIpSetupStates();
+restorePendingChannels(); // TODO: Migrate to state manager
+restoreWizardStates(); // Handled by state manager
+restoreConversationStates(); // Handled by state manager
+restoreIpSetupStates(); // Handled by state manager
 
 // Очистка старих станів (старше 24 годин)
 cleanupOldStates();
@@ -59,15 +64,23 @@ const shutdown = async (signal) => {
     await bot.stopPolling();
     console.log('✅ Polling зупинено');
     
-    // 2. Зупиняємо моніторинг живлення
+    // 2. Зупиняємо scheduler manager
+    schedulerManager.stop();
+    console.log('✅ Scheduler manager зупинено');
+    
+    // 3. Зупиняємо state manager cleanup
+    stopCleanup();
+    console.log('✅ State manager зупинено');
+    
+    // 4. Зупиняємо моніторинг живлення
     stopPowerMonitoring();
     console.log('✅ Моніторинг живлення зупинено');
     
-    // 3. Зберігаємо всі стани користувачів
+    // 5. Зберігаємо всі стани користувачів
     await saveAllUserStates();
     console.log('✅ Стани користувачів збережено');
     
-    // 4. Закриваємо базу даних коректно
+    // 6. Закриваємо базу даних коректно
     const { closeDatabase } = require('./database/db');
     closeDatabase();
     
