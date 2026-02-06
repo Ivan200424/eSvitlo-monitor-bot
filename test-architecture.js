@@ -163,15 +163,14 @@ test('StateManager clearNamespace', () => {
   assert.strictEqual(all.size, 0);
 });
 
-test('StateManager TTL', (done) => {
+test('StateManager TTL', async () => {
   stateManager.set('test', 'ttl_key', 'value', { ttl: 100 });
   
   assert(stateManager.has('test', 'ttl_key'));
   
-  setTimeout(() => {
-    assert(!stateManager.has('test', 'ttl_key'), 'Key should have expired');
-    done();
-  }, 150);
+  await new Promise(resolve => setTimeout(resolve, 150));
+  
+  assert(!stateManager.has('test', 'ttl_key'), 'Key should have expired');
 });
 
 test('StateManager getStats', () => {

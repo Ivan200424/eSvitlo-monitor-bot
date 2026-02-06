@@ -23,7 +23,7 @@ class SchedulerManager {
    * @private
    */
   _generateInstanceId() {
-    return `instance_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `instance_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   /**

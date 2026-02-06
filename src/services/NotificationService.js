@@ -258,7 +258,6 @@ class NotificationService {
 
     // Always update hashes to prevent infinite retry loops
     // even if publication failed, as the user will be notified
-    const usersDb = require('../database/users');
     usersDb.updateUserScheduleHashes(
       user.id,
       todayHash,
