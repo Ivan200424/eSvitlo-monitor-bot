@@ -611,12 +611,19 @@ function getFeedbackByType(feedbackType, limit = 100) {
 function getFeedbackCount(sinceMinutes = null) {
   try {
     if (sinceMinutes) {
-      // Use parameterized query to prevent SQL injection
+      // Validate and sanitize input
+      const minutes = parseInt(sinceMinutes, 10);
+      if (isNaN(minutes) || minutes < 0) {
+        console.error('Invalid sinceMinutes parameter:', sinceMinutes);
+        return 0;
+      }
+      
+      // Use parameterized query with validated numeric input
       return db.prepare(`
         SELECT COUNT(*) as count 
         FROM feedback 
         WHERE created_at >= datetime('now', '-' || ? || ' minutes')
-      `).get(sinceMinutes).count;
+      `).get(minutes).count;
     } else {
       return db.prepare(`
         SELECT COUNT(*) as count FROM feedback

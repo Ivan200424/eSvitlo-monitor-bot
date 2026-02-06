@@ -9,6 +9,10 @@
 
 const { getAllFeedback, getFeedbackByType, getFeedbackCount } = require('./database/db');
 
+// Constants
+const MAX_PREVIEW_LENGTH = 100; // Maximum length for text preview in admin display
+const DEFAULT_FEEDBACK_LIMIT = 100; // Default limit for feedback queries
+
 /**
  * Get feedback statistics summary
  */
@@ -84,7 +88,7 @@ function detectFeedbackSpike(windowMinutes = 60, thresholdMultiplier = 3) {
 /**
  * Get grouped feedback by type for admin review
  */
-function getGroupedFeedback(limit = 100) {
+function getGroupedFeedback(limit = DEFAULT_FEEDBACK_LIMIT) {
   try {
     const bugs = getFeedbackByType('bug', limit);
     const unclear = getFeedbackByType('unclear', limit);
@@ -122,7 +126,7 @@ function formatFeedbackForAdmin(feedback) {
     }[item.feedback_type] || '❓';
     
     message += `\n${index + 1}. ${type} ${username} (${date})\n`;
-    message += `   ${item.feedback_text.substring(0, 100)}${item.feedback_text.length > 100 ? '...' : ''}\n`;
+    message += `   ${item.feedback_text.substring(0, MAX_PREVIEW_LENGTH)}${item.feedback_text.length > MAX_PREVIEW_LENGTH ? '...' : ''}\n`;
   });
   
   return message;

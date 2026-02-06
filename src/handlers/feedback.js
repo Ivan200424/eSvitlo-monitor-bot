@@ -7,6 +7,11 @@ const { getFeedbackTypeKeyboard, getFeedbackCancelKeyboard } = require('../keybo
 const { safeSendMessage, safeEditMessageText } = require('../utils/errorHandler');
 const { getState, setState, clearState } = require('../state/stateManager');
 
+// Constants
+const MIN_FEEDBACK_LENGTH = 3;
+const FEEDBACK_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const CONTEXTUAL_FEEDBACK_DELAY_MS = 2000; // 2 seconds
+
 // Feedback type mappings
 const FEEDBACK_TYPES = {
   bug: '🐞 Помилка',
@@ -75,10 +80,10 @@ async function handleFeedback(bot, msg, context = null) {
     );
     
     if (sentMessage) {
-      // Set up timeout for feedback flow (30 minutes)
+      // Set up timeout for feedback flow
       const timeout = setTimeout(() => {
         clearFeedbackState(telegramId);
-      }, 30 * 60 * 1000);
+      }, FEEDBACK_TIMEOUT_MS);
       
       setFeedbackState(telegramId, {
         step: 'type_selection',
@@ -185,8 +190,8 @@ async function handleFeedbackConversation(bot, msg) {
       return false; // Not in feedback conversation
     }
     
-    // Validate text length (basic)
-    if (!text || text.trim().length < 3) {
+    // Validate text length
+    if (!text || text.trim().length < MIN_FEEDBACK_LENGTH) {
       await safeSendMessage(
         bot,
         chatId,
