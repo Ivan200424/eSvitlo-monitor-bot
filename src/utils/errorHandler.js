@@ -69,18 +69,38 @@ async function safeEditMessageText(bot, text, options = {}) {
   try {
     return await bot.editMessageText(text, options);
   } catch (error) {
+    // Перевіряємо чи це помилка від Telegram API
+    if (error.code !== 'ETELEGRAM') {
+      // Не Telegram помилка - логуємо і викидаємо
+      logger.error(`Помилка редагування тексту повідомлення:`, { 
+        error: error.message,
+        code: error.code
+      });
+      throw error;
+    }
+    
+    const errorDescription = error.response?.body?.description || '';
+    
     // Ігноруємо помилку "message is not modified" — це нормальна ситуація
     // Виникає коли користувач натискає ту саму кнопку двічі
-    if (error.code === 'ETELEGRAM' && 
-        error.response?.body?.description?.includes('message is not modified')) {
+    if (errorDescription.includes('message is not modified')) {
       // Повідомлення вже актуальне, нічого робити не потрібно
       return null;
     }
+    
+    // Обробляємо помилку "there is no text in the message to edit" — це очікувана ситуація
+    // Виникає коли намагаємось редагувати повідомлення з фото (яке має caption замість тексту)
+    // Викидаємо без логування, оскільки викликач (напр. bot.js:back_to_main) обробляє
+    // цю помилку через try-catch і реалізує fallback (видалення старого повідомлення + відправка нового)
+    if (errorDescription.includes('there is no text in the message to edit')) {
+      throw error;
+    }
+    
     // Інші помилки логуємо з повним контекстом
     logger.error(`Помилка редагування тексту повідомлення:`, { 
       error: error.message,
       code: error.code,
-      description: error.response?.body?.description
+      description: errorDescription
     });
     throw error;
   }
