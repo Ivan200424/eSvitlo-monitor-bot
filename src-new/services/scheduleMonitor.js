@@ -196,8 +196,9 @@ async function publishToChannel(user, scheduleData, changes) {
   } catch (error) {
     console.error(`Error publishing to channel for user ${user.telegram_id}:`, error);
     
-    // Mark channel as blocked if we get a bot blocked error
-    if (error.description && error.description.includes('bot was blocked')) {
+    // Mark channel as blocked if we get specific Telegram errors
+    if (error.error_code === 403 || error.error_code === 400) {
+      // Bot was blocked or chat not found
       storage.updateUser(user.telegram_id, {
         channel_status: 'blocked'
       });

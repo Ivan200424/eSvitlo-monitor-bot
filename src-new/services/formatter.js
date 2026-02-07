@@ -30,6 +30,3 @@ export function formatHelpMessage() {
 export function formatErrorMessage(error) {
   return formatter.formatErrorMessage(error);
 }
-
-// Export utils for formatting
-export { default as formatTime } from '../../src/utils.js';

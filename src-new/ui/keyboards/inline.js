@@ -122,10 +122,7 @@ export function getSettingsKeyboard(isAdmin = false) {
   );
   
   buttons.push(
-    [
-      { text: '← Назад', callback_data: 'back_to_main' },
-      { text: '⤴ Меню', callback_data: 'back_to_main' }
-    ]
+    [{ text: '⤴ Меню', callback_data: 'back_to_main' }]
   );
   
   return {
