@@ -254,7 +254,7 @@ bot.on("callback_query:data", async (ctx) => {
                 ]
               ]
             }
-          }, { filename: 'schedule.png', contentType: 'image/png' });
+          });
         } catch (imgError) {
           // If image unavailable, just edit text
           console.log('Schedule image unavailable:', imgError.message);
@@ -968,12 +968,12 @@ bot.on("my_chat_member", async (ctx) => {
           if (wizardState.lastMessageId) {
             try {
               await bot.api.editMessageText(
+                userId,
+                wizardState.lastMessageId,
                 `❌ <b>Бота видалено з каналу</b>\n\n` +
                 `Канал "${escapeHtml(channelTitle)}" більше недоступний.\n\n` +
                 `Щоб підключити канал, додайте бота як адміністратора.`,
                 {
-                  chat_id: userId,
-                  message_id: wizardState.lastMessageId,
                   parse_mode: 'HTML',
                   reply_markup: {
                     inline_keyboard: [
