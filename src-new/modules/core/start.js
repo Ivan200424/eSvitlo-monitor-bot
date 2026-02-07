@@ -21,7 +21,7 @@ function clearWizardState(telegramId) {
 
 function isInWizard(telegramId) {
   const state = getWizardState(telegramId);
-  return !!(state && state.step);
+  return state && state.step;
 }
 
 export async function handleStart(ctx) {

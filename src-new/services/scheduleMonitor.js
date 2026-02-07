@@ -85,7 +85,14 @@ async function checkUserSchedule(user, scheduleData) {
     }
     
     // Schedule changed - detect what changed
-    const oldData = user.last_schedule_data ? JSON.parse(user.last_schedule_data) : null;
+    let oldData = null;
+    if (user.last_schedule_data) {
+      try {
+        oldData = JSON.parse(user.last_schedule_data);
+      } catch (error) {
+        console.error(`Failed to parse last_schedule_data for user ${user.telegram_id}:`, error);
+      }
+    }
     const changes = oldData ? parser.detectScheduleChanges(oldData, parsedData, user.queue) : null;
     
     // Update user hash

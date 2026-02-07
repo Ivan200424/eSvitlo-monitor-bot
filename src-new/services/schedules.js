@@ -24,7 +24,7 @@ async function fetchWithRetry(url, retries = 3, isImage = false) {
         throw new Error(`Failed to fetch ${url} after ${retries} attempts: ${error.message}`);
       }
       
-      const delay = delays[i] || delays[delays.length - 1];
+      const delay = delays[i] || delays[delays.length - 1]; // Array access is within bounds; fallback for future extensibility
       console.log(`Retry ${i + 1}/${retries} for ${url} after ${delay}ms`);
       await new Promise(resolve => setTimeout(resolve, delay));
     }

@@ -524,8 +524,11 @@ export function getErrorKeyboard() {
 // Меню налаштування debounce
 export function getDebounceKeyboard(currentValue) {
   const options = [1, 2, 3, 5, 10, 15];
+  // Normalize currentValue to number for comparison
+  const currentNum = parseInt(currentValue, 10);
+  
   const buttons = options.map(min => ({
-    text: currentValue === String(min) || currentValue === min ? `✓ ${min} хв` : `${min} хв`,
+    text: currentNum === min ? `✓ ${min} хв` : `${min} хв`,
     callback_data: `debounce_set_${min}`
   }));
   

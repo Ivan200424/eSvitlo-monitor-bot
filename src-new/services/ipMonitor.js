@@ -44,10 +44,22 @@ async function checkAllUsers(bot, onStateChange) {
 }
 
 async function pingHost(host, port = 80, timeout = 5000) {
+  // Sanitize host to prevent command injection
+  if (!host || typeof host !== 'string') {
+    return false;
+  }
+  
+  // Remove any characters that could be used for command injection
+  const sanitizedHost = host.replace(/[^a-zA-Z0-9.\-:]/g, '');
+  
+  if (sanitizedHost !== host) {
+    console.warn(`Host sanitized from "${host}" to "${sanitizedHost}"`);
+  }
+  
   try {
     const command = process.platform === 'win32' 
-      ? `ping -n 1 -w ${timeout} ${host}`
-      : `ping -c 1 -W ${Math.ceil(timeout / 1000)} ${host}`;
+      ? `ping -n 1 -w ${timeout} ${sanitizedHost}`
+      : `ping -c 1 -W ${Math.ceil(timeout / 1000)} ${sanitizedHost}`;
     
     await execAsync(command);
     return true;
