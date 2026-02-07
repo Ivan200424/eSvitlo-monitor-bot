@@ -5,7 +5,9 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
+    "start:new": "node --experimental-specifier-resolution=node src-new/index.js",
     "dev": "nodemon src/index.js",
+    "dev:new": "nodemon --experimental-specifier-resolution=node src-new/index.js",
     "test": "node test.js"
   },
   "keywords": [
