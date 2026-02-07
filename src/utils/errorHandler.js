@@ -16,7 +16,7 @@ const logger = createLogger('ErrorHandler');
  */
 async function safeSendMessage(bot, chatId, text, options = {}) {
   try {
-    return await bot.sendMessage(chatId, text, options);
+    return await bot.api.sendMessage(chatId, text, options);
   } catch (error) {
     logger.error(`Помилка відправки повідомлення ${chatId}:`, { error: error.message });
     return null;
@@ -32,7 +32,7 @@ async function safeSendMessage(bot, chatId, text, options = {}) {
  */
 async function safeDeleteMessage(bot, chatId, messageId) {
   try {
-    await bot.deleteMessage(chatId, messageId);
+    await bot.api.deleteMessage(chatId, messageId);
     return true;
   } catch (error) {
     // Ігноруємо — повідомлення могло бути вже видалене
@@ -51,7 +51,7 @@ async function safeDeleteMessage(bot, chatId, messageId) {
  */
 async function safeEditMessage(bot, chatId, messageId, text, options = {}) {
   try {
-    return await bot.editMessageText(text, { chat_id: chatId, message_id: messageId, ...options });
+    return await bot.api.editMessageText(chatId, messageId, text, options);
   } catch (error) {
     logger.error(`Помилка редагування повідомлення:`, { error: error.message });
     return null;
@@ -67,19 +67,20 @@ async function safeEditMessage(bot, chatId, messageId, text, options = {}) {
  */
 async function safeEditMessageText(bot, text, options = {}) {
   try {
-    return await bot.editMessageText(text, options);
+    const { chat_id, message_id, ...rest } = options;
+    return await bot.api.editMessageText(chat_id, message_id, text, rest);
   } catch (error) {
-    // Перевіряємо чи це помилка від Telegram API
-    if (error.code !== 'ETELEGRAM') {
+    // Перевіряємо чи це помилка від Telegram API (grammY використовує error_code)
+    if (!error.error_code) {
       // Не Telegram помилка - логуємо і викидаємо
       logger.error(`Помилка редагування тексту повідомлення:`, { 
         error: error.message,
-        code: error.code
+        code: error.error_code
       });
       throw error;
     }
     
-    const errorDescription = error.response?.body?.description || '';
+    const errorDescription = error.description || error.message || '';
     
     // Ігноруємо помилку "message is not modified" — це нормальна ситуація
     // Виникає коли користувач натискає ту саму кнопку двічі
@@ -99,7 +100,7 @@ async function safeEditMessageText(bot, text, options = {}) {
     // Інші помилки логуємо з повним контекстом
     logger.error(`Помилка редагування тексту повідомлення:`, { 
       error: error.message,
-      code: error.code,
+      code: error.error_code,
       description: errorDescription
     });
     throw error;
@@ -117,7 +118,7 @@ async function safeEditMessageText(bot, text, options = {}) {
  */
 async function safeSendPhoto(bot, chatId, photo, options = {}, fileOpts = {}) {
   try {
-    return await bot.sendPhoto(chatId, photo, options, fileOpts);
+    return await bot.api.sendPhoto(chatId, photo, { ...options, ...fileOpts });
   } catch (error) {
     logger.error(`Помилка відправки фото ${chatId}:`, { error: error.message });
     return null;
@@ -133,7 +134,7 @@ async function safeSendPhoto(bot, chatId, photo, options = {}, fileOpts = {}) {
  */
 async function safeAnswerCallbackQuery(bot, callbackQueryId, options = {}) {
   try {
-    await bot.answerCallbackQuery(callbackQueryId, options);
+    await bot.api.answerCallbackQuery(callbackQueryId, options);
     return true;
   } catch (error) {
     logger.error(`Помилка відповіді на callback query:`, { error: error.message });
@@ -150,12 +151,12 @@ async function safeAnswerCallbackQuery(bot, callbackQueryId, options = {}) {
  */
 async function safeSetChatTitle(bot, chatId, title) {
   try {
-    await bot.setChatTitle(chatId, title);
+    await bot.api.setChatTitle(chatId, title);
     return true;
   } catch (error) {
     // Ігноруємо помилку "chat title is not modified"
-    if (error.code === 'ETELEGRAM' && 
-        error.response?.body?.description?.includes('title is not modified')) {
+    const errorDescription = error.description || error.message || '';
+    if (error.error_code && errorDescription.includes('title is not modified')) {
       logger.info(`Назва чату ${chatId} вже актуальна, пропускаємо`);
       return true;
     }
@@ -173,12 +174,12 @@ async function safeSetChatTitle(bot, chatId, title) {
  */
 async function safeSetChatDescription(bot, chatId, description) {
   try {
-    await bot.setChatDescription(chatId, description);
+    await bot.api.setChatDescription(chatId, description);
     return true;
   } catch (error) {
     // Ігноруємо помилку "chat description is not modified"
-    if (error.code === 'ETELEGRAM' && 
-        error.response?.body?.description?.includes('description is not modified')) {
+    const errorDescription = error.description || error.message || '';
+    if (error.error_code && errorDescription.includes('description is not modified')) {
       logger.info(`Опис чату ${chatId} вже актуальний, пропускаємо`);
       return true;
     }
@@ -196,9 +197,9 @@ async function safeSetChatDescription(bot, chatId, description) {
  * @param {Object} fileOpts - Опції файлу
  * @returns {Promise<Boolean>} - true якщо успішно, false при помилці
  */
-async function safeSetChatPhoto(bot, chatId, photo, options = {}, fileOpts = {}) {
+async function safeSetChatPhoto(bot, chatId, photo) {
   try {
-    await bot.setChatPhoto(chatId, photo, options, fileOpts);
+    await bot.api.setChatPhoto(chatId, photo);
     return true;
   } catch (error) {
     logger.error(`Помилка зміни фото чату ${chatId}:`, { error: error.message });
