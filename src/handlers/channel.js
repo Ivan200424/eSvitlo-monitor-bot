@@ -1926,7 +1926,7 @@ async function handleChannelCallback(bot, query) {
 async function applyChannelBranding(bot, chatId, telegramId, state) {
   try {
     // Show typing indicator
-    await bot.sendChatAction(chatId, 'typing');
+    await bot.api.sendChatAction(chatId, 'typing');
     await bot.api.sendMessage(chatId, '⏳ Налаштовую канал...');
     
     const fullTitle = CHANNEL_NAME_PREFIX + state.userTitle;
