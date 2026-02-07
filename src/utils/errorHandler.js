@@ -71,9 +71,7 @@ async function safeEditMessageText(bot, text, options = {}) {
     return await bot.api.editMessageText(chat_id, message_id, text, rest);
   } catch (error) {
     // Перевіряємо чи це помилка від Telegram API (grammY використовує error_code)
-    if (error.error_code) {
-      // Це Telegram помилка - обробляємо спеціальні випадки нижче
-    } else {
+    if (!error.error_code) {
       // Не Telegram помилка - логуємо і викидаємо
       logger.error(`Помилка редагування тексту повідомлення:`, { 
         error: error.message,
@@ -82,6 +80,7 @@ async function safeEditMessageText(bot, text, options = {}) {
       throw error;
     }
     
+    // Це Telegram помилка - обробляємо спеціальні випадки
     const errorDescription = error.description || error.message || '';
     
     // Ігноруємо помилку "message is not modified" — це нормальна ситуація
