@@ -37,7 +37,7 @@ function restoreConversationStates() {
 function isTelegramNotModifiedError(error) {
   // grammY uses error_code and description directly on the error object
   const description = error.description || error.message || '';
-  return (error.error_code && description.includes('is not modified'));
+  return error.error_code && description.includes('is not modified');
 }
 
 // Helper function to generate channel welcome message
